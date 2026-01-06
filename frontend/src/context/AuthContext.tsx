@@ -1,0 +1,182 @@
+import {
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react';
+import {
+  AuthContext,
+  type AuthUser,
+  type AuthContextType,
+  type UserPreferences,
+  type UserRole,
+} from './auth-context';
+
+// Re-export types for convenience
+export type { UserRole, UserPreferences, AuthUser, AuthContextType } from './auth-context';
+export { AuthContext } from './auth-context';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const TOKEN_STORAGE_KEY = 'relay_id_token';
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [idToken, setIdToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch user details from our API
+  const fetchUserDetails = useCallback(async (token: string): Promise<AuthUser | null> => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        // Token is invalid or expired
+        if (response.status === 401) {
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          return null;
+        }
+        console.error('Failed to fetch user details');
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      return null;
+    }
+  }, []);
+
+  // Initialize auth state from stored token
+  useEffect(() => {
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+
+      if (storedToken) {
+        const userDetails = await fetchUserDetails(storedToken);
+        if (userDetails) {
+          setIdToken(storedToken);
+          setUser(userDetails);
+        } else {
+          // Token was invalid, clear it
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    initAuth();
+  }, [fetchUserDetails]);
+
+  // Sign in with Google credential (called from GoogleLogin component)
+  const signIn = useCallback(async (credential: string) => {
+    setIsLoading(true);
+
+    try {
+      // Store the token
+      localStorage.setItem(TOKEN_STORAGE_KEY, credential);
+      setIdToken(credential);
+
+      // Fetch user details from our API
+      const userDetails = await fetchUserDetails(credential);
+
+      if (userDetails) {
+        setUser(userDetails);
+      } else {
+        // Failed to get user details, clear the token
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        setIdToken(null);
+        throw new Error('Failed to authenticate');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchUserDetails]);
+
+  const signOut = useCallback(async () => {
+    // Call our API to log the logout
+    if (idToken) {
+      try {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+      } catch (error) {
+        console.error('Error logging logout:', error);
+      }
+    }
+
+    // Clear local state and storage
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    setUser(null);
+    setIdToken(null);
+  }, [idToken]);
+
+  const refreshUser = useCallback(async () => {
+    if (!idToken) return;
+
+    const userDetails = await fetchUserDetails(idToken);
+    if (userDetails) {
+      setUser(userDetails);
+    }
+  }, [idToken, fetchUserDetails]);
+
+  const updatePreferences = useCallback(
+    async (preferences: Partial<UserPreferences>) => {
+      if (!idToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${API_URL}/api/auth/preferences`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(preferences),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update preferences');
+      }
+
+      // Refresh user to get updated preferences
+      await refreshUser();
+    },
+    [idToken, refreshUser]
+  );
+
+  const hasRole = useCallback(
+    (roles: UserRole | UserRole[]) => {
+      if (!user) return false;
+      const roleArray = Array.isArray(roles) ? roles : [roles];
+      return roleArray.includes(user.role);
+    },
+    [user]
+  );
+
+  const value: AuthContextType = {
+    user,
+    idToken,
+    isLoading,
+    isAuthenticated: !!user && !!idToken,
+    signIn,
+    signOut,
+    refreshUser,
+    updatePreferences,
+    hasRole,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
