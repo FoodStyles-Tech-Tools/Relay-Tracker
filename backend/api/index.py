@@ -10,18 +10,18 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configure CORS
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:3000",
-    "https://relay-tracker.vercel.app",
-]
+# For development, allow all variations of local dev servers
+def get_origins():
+    return [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5001",
+        "http://127.0.0.1:5001",
+        "https://relay-tracker.vercel.app",
+    ]
 
-# Add any custom origin from environment
-custom_origin = os.getenv("FRONTEND_URL")
-if custom_origin:
-    ALLOWED_ORIGINS.append(custom_origin)
-
-CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+# Apply CORS to all routes
+CORS(app, resources={r"/*": {"origins": get_origins()}}, supports_credentials=True, allow_headers=["Content-Type", "Authorization", "X-Requested-With"])
 
 # Register blueprints
 from api.routes.auth import auth_bp  # noqa: E402

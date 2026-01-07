@@ -13,7 +13,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { MainLayout } from '../components';
+import { MainLayout, showToast } from '../components';
 import { fetchIssue, updateIssue, addComment } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import type { Issue, IssueType, IssuePriority, IssueStatus } from '../types';
@@ -38,11 +38,14 @@ const typeConfig: Record<IssueType, { icon: typeof Bug; color: string; bgColor: 
 };
 
 // Status colors
-const statusColors: Record<IssueStatus, string> = {
+const statusColors: Record<string, string> = {
   'Open': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  'To Do': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   'In Progress': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   'In Review': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  'Resolved': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  'Closed': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
   'Cancelled': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
@@ -150,25 +153,47 @@ export function IssueDetailPage({ issueKey, onBack }: IssueDetailPageProps) {
     };
   }, [loadIssue]);
 
-  // Handle status change
+  // Handle status change with optimistic UI
   const handleStatusChange = async (newStatus: IssueStatus) => {
     if (!issue) return;
+
+    const previousStatus = issue.status;
+
+    // Optimistic update - update UI immediately
+    setIssue({ ...issue, status: newStatus });
+
     try {
       await updateIssue(issueKey, { status: newStatus });
-      setIssue({ ...issue, status: newStatus });
     } catch (err) {
-      console.error('Failed to update status:', err);
+      // Rollback on failure
+      setIssue({ ...issue, status: previousStatus });
+      showToast({
+        type: 'error',
+        title: 'Update failed',
+        message: err instanceof Error ? err.message : 'Failed to update status',
+      });
     }
   };
 
-  // Handle priority change
+  // Handle priority change with optimistic UI
   const handlePriorityChange = async (newPriority: IssuePriority) => {
     if (!issue) return;
+
+    const previousPriority = issue.priority;
+
+    // Optimistic update - update UI immediately
+    setIssue({ ...issue, priority: newPriority });
+
     try {
       await updateIssue(issueKey, { priority: newPriority });
-      setIssue({ ...issue, priority: newPriority });
     } catch (err) {
-      console.error('Failed to update priority:', err);
+      // Rollback on failure
+      setIssue({ ...issue, priority: previousPriority });
+      showToast({
+        type: 'error',
+        title: 'Update failed',
+        message: err instanceof Error ? err.message : 'Failed to update priority',
+      });
     }
   };
 

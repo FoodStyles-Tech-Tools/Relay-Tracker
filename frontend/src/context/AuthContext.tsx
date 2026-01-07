@@ -1,23 +1,23 @@
-import {
-  useEffect,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import {
   AuthContext,
   type AuthUser,
   type AuthContextType,
   type UserPreferences,
   type UserRole,
-} from './auth-context';
+} from "./auth-context";
 
 // Re-export types for convenience
-export type { UserRole, UserPreferences, AuthUser, AuthContextType } from './auth-context';
-export { AuthContext } from './auth-context';
+export type {
+  UserRole,
+  UserPreferences,
+  AuthUser,
+  AuthContextType,
+} from "./auth-context";
+export { AuthContext } from "./auth-context";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const TOKEN_STORAGE_KEY = 'relay_id_token';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const TOKEN_STORAGE_KEY = "relay_id_token";
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -29,30 +29,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user details from our API
-  const fetchUserDetails = useCallback(async (token: string): Promise<AuthUser | null> => {
-    try {
-      const response = await fetch(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  const fetchUserDetails = useCallback(
+    async (token: string): Promise<AuthUser | null> => {
+      try {
+        const response = await fetch(`${API_URL}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!response.ok) {
-        // Token is invalid or expired
-        if (response.status === 401) {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
+        if (!response.ok) {
+          // Token is invalid or expired
+          if (response.status === 401) {
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            return null;
+          }
+          console.error("Failed to fetch user details");
           return null;
         }
-        console.error('Failed to fetch user details');
+
+        return await response.json();
+      } catch (error) {
+        console.error("Error fetching user details:", error);
         return null;
       }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching user details:', error);
-      return null;
-    }
-  }, []);
+    },
+    []
+  );
 
   // Initialize auth state from stored token
   useEffect(() => {
@@ -77,42 +80,65 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [fetchUserDetails]);
 
   // Sign in with Google credential (called from GoogleLogin component)
-  const signIn = useCallback(async (credential: string) => {
-    setIsLoading(true);
+  const signIn = useCallback(
+    async (credential: string) => {
+      setIsLoading(true);
 
-    try {
-      // Store the token
-      localStorage.setItem(TOKEN_STORAGE_KEY, credential);
-      setIdToken(credential);
+      try {
+        // Store the token
+        localStorage.setItem(TOKEN_STORAGE_KEY, credential);
+        setIdToken(credential);
 
-      // Fetch user details from our API
-      const userDetails = await fetchUserDetails(credential);
+        // Fetch user details from our API
+        const userDetails = await fetchUserDetails(credential);
 
-      if (userDetails) {
-        setUser(userDetails);
-      } else {
-        // Failed to get user details, clear the token
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-        setIdToken(null);
-        throw new Error('Failed to authenticate');
+        if (userDetails) {
+          setUser(userDetails);
+        } else {
+          // Failed to get user details, clear the token
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          setIdToken(null);
+          throw new Error("Failed to authenticate");
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchUserDetails]);
+    },
+    [fetchUserDetails]
+  );
+
+  const loginAsGuest = useCallback(() => {
+    const mockToken = "dev-token-secret";
+    const mockUser: AuthUser = {
+      id: "dev-admin-123",
+      email: "dev-admin@relay.local",
+      name: "Dev Admin",
+      avatar_url: "https://ui-avatars.com/api/?name=Dev+Admin",
+      role: "admin",
+      preferences: {
+        email_notifications: true,
+        discord_notifications: true,
+        theme: "dark",
+      },
+    };
+
+    localStorage.setItem(TOKEN_STORAGE_KEY, mockToken);
+    setIdToken(mockToken);
+    setUser(mockUser);
+  }, []);
 
   const signOut = useCallback(async () => {
     // Call our API to log the logout
     if (idToken) {
       try {
         await fetch(`${API_URL}/api/auth/logout`, {
-          method: 'POST',
+          method: "POST",
           headers: {
             Authorization: `Bearer ${idToken}`,
           },
         });
       } catch (error) {
-        console.error('Error logging logout:', error);
+        console.error("Error logging logout:", error);
       }
     }
 
@@ -134,21 +160,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const updatePreferences = useCallback(
     async (preferences: Partial<UserPreferences>) => {
       if (!idToken) {
-        throw new Error('Not authenticated');
+        throw new Error("Not authenticated");
       }
 
       const response = await fetch(`${API_URL}/api/auth/preferences`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
           Authorization: `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(preferences),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to update preferences');
+        throw new Error(error.message || "Failed to update preferences");
       }
 
       // Refresh user to get updated preferences
@@ -166,12 +192,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [user]
   );
 
+  // Theme Watcher: Apply 'dark' class based on user preferences or system
+  useEffect(() => {
+    const applyTheme = () => {
+      const theme = user?.preferences?.theme || "system";
+      const root = window.document.documentElement;
+
+      if (theme === "dark") {
+        root.classList.add("dark");
+      } else if (theme === "light") {
+        root.classList.remove("dark");
+      } else {
+        // System preference
+        const isDark = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
+        if (isDark) {
+          root.classList.add("dark");
+        } else {
+          root.classList.remove("dark");
+        }
+      }
+    };
+
+    applyTheme();
+
+    // Listen for system theme changes if set to system
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleSystemChange = () => {
+      if ((user?.preferences?.theme || "system") === "system") {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener("change", handleSystemChange);
+    return () => mediaQuery.removeEventListener("change", handleSystemChange);
+  }, [user?.preferences?.theme]);
+
   const value: AuthContextType = {
     user,
     idToken,
     isLoading,
     isAuthenticated: !!user && !!idToken,
     signIn,
+    loginAsGuest,
     signOut,
     refreshUser,
     updatePreferences,

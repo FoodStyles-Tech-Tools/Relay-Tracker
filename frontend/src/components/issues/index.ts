@@ -8,3 +8,4 @@ export { ActivityTimeline } from './ActivityTimeline';
 export { StatusDropdown } from './StatusDropdown';
 export { PriorityDropdown } from './PriorityDropdown';
 export { CreateIssueModal } from './CreateIssueModal';
+export { BulkActionBar } from './BulkActionBar';

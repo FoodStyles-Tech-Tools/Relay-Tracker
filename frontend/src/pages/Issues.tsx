@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { MainLayout, showToast } from '../components';
-import { IssueList, FilterBar, SearchBar, Pagination, CreateIssueModal } from '../components/issues';
-import { fetchIssues, type IssuesResponse } from '../lib/api';
+import { IssueList, FilterBar, SearchBar, Pagination, CreateIssueModal, BulkActionBar } from '../components/issues';
+import { fetchIssues, bulkUpdateIssueStatus, type IssuesResponse } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import type { Issue, IssueType, IssuePriority, IssueStatus } from '../types';
 
 const ITEMS_PER_PAGE = 20;
@@ -52,12 +53,19 @@ function updateUrlFilters(filters: {
 export function IssuesPage() {
   // Initialize state from URL
   const initialFilters = parseUrlFilters();
+  const { hasRole } = useAuth();
+
+  // Only SQA and Admin can bulk edit
+  const canBulkEdit = hasRole(['sqa', 'admin']);
 
   const [issues, setIssues] = useState<Issue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+
+  // Bulk selection state
+  const [selectedIssueKeys, setSelectedIssueKeys] = useState<Set<string>>(new Set());
 
   // Filter state
   const [selectedStatuses, setSelectedStatuses] = useState<IssueStatus[]>(initialFilters.statuses);
@@ -150,6 +158,78 @@ export function IssuesPage() {
   const handleRefresh = useCallback(() => {
     loadIssues();
   }, [loadIssues]);
+
+  // Bulk selection handlers
+  const handleToggleSelect = useCallback((key: string) => {
+    setSelectedIssueKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((keys: string[]) => {
+    if (keys.length === 0) {
+      // Clear selection for visible issues
+      setSelectedIssueKeys((prev) => {
+        const next = new Set(prev);
+        issues.forEach((issue) => next.delete(issue.key));
+        return next;
+      });
+    } else {
+      // Add all visible issues to selection
+      setSelectedIssueKeys((prev) => {
+        const next = new Set(prev);
+        keys.forEach((key) => next.add(key));
+        return next;
+      });
+    }
+  }, [issues]);
+
+  // Bulk action state
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIssueKeys(new Set());
+  }, []);
+
+  const handleBulkStatusUpdate = useCallback(async (status: IssueStatus) => {
+    if (selectedIssueKeys.size === 0) return;
+
+    setIsBulkUpdating(true);
+    try {
+      const result = await bulkUpdateIssueStatus(Array.from(selectedIssueKeys), status);
+
+      if (result.failed.length > 0) {
+        showToast({
+          type: 'warning',
+          title: 'Partial update',
+          message: `${result.updated} updated, ${result.failed.length} failed`,
+        });
+      } else {
+        showToast({
+          type: 'success',
+          title: 'Bulk update complete',
+          message: `${result.updated} issue(s) updated to "${status}"`,
+        });
+      }
+
+      setSelectedIssueKeys(new Set());
+      loadIssues();
+    } catch (err) {
+      showToast({
+        type: 'error',
+        title: 'Bulk update failed',
+        message: err instanceof Error ? err.message : 'Failed to update issues',
+      });
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  }, [selectedIssueKeys, loadIssues]);
 
   // Create Issue Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -248,6 +328,13 @@ export function IssuesPage() {
           issues={issues}
           isLoading={isLoading}
           onIssueClick={handleIssueClick}
+          selectable={canBulkEdit}
+          selectedKeys={selectedIssueKeys}
+          onToggle={handleToggleSelect}
+          onSelectAll={handleSelectAll}
+          hasFilters={selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedTypes.length > 0 || !!searchQuery}
+          onClearFilters={handleClearAll}
+          onCreateIssue={() => setIsCreateModalOpen(true)}
         />
 
         {/* Pagination */}
@@ -268,6 +355,16 @@ export function IssuesPage() {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleIssueCreated}
       />
+
+      {/* Bulk Action Bar */}
+      {canBulkEdit && (
+        <BulkActionBar
+          selectedCount={selectedIssueKeys.size}
+          onClearSelection={handleClearSelection}
+          onApplyStatus={handleBulkStatusUpdate}
+          isLoading={isBulkUpdating}
+        />
+      )}
     </MainLayout>
   );
 }

@@ -1,18 +1,28 @@
-import { Bug, ListTodo, BookOpen, Clock, User } from 'lucide-react';
+import { Bug, ListTodo, BookOpen, Clock, User, Search, Plus } from 'lucide-react';
 import type { Issue, IssueType, IssuePriority, IssueStatus } from '../../types';
 
 interface IssueListProps {
   issues: Issue[];
   isLoading?: boolean;
   onIssueClick?: (key: string) => void;
+  selectable?: boolean;
+  selectedKeys?: Set<string>;
+  onToggle?: (key: string) => void;
+  onSelectAll?: (keys: string[]) => void;
+  hasFilters?: boolean;
+  onClearFilters?: () => void;
+  onCreateIssue?: () => void;
 }
 
 // Status badge colors
-const statusColors: Record<IssueStatus, string> = {
+const statusColors: Record<string, string> = {
   'Open': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  'To Do': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   'In Progress': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   'In Review': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   'Done': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  'Resolved': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  'Closed': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
   'Cancelled': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
@@ -113,12 +123,39 @@ function LoadingSkeleton() {
 }
 
 // Desktop table row
-function IssueRow({ issue, onClick }: { issue: Issue; onClick?: () => void }) {
+function IssueRow({
+  issue,
+  onClick,
+  selectable,
+  isSelected,
+  onToggle
+}: {
+  issue: Issue;
+  onClick?: () => void;
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggle?: () => void;
+}) {
   return (
     <tr
       onClick={onClick}
-      className="group hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
+      className={`group hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0 ${isSelected ? 'bg-relay-orange/5 dark:bg-relay-orange/10' : ''}`}
     >
+      {/* Checkbox */}
+      {selectable && (
+        <td className="px-4 py-3 w-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggle?.();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-relay-orange focus:ring-relay-orange cursor-pointer"
+          />
+        </td>
+      )}
       {/* Type + Key */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
@@ -178,15 +215,39 @@ function IssueRow({ issue, onClick }: { issue: Issue; onClick?: () => void }) {
 }
 
 // Mobile card
-function IssueCard({ issue, onClick }: { issue: Issue; onClick?: () => void }) {
+function IssueCard({
+  issue,
+  onClick,
+  selectable,
+  isSelected,
+  onToggle
+}: {
+  issue: Issue;
+  onClick?: () => void;
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggle?: () => void;
+}) {
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange cursor-pointer transition-all hover:shadow-md"
+      className={`bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange cursor-pointer transition-all hover:shadow-md ${isSelected ? 'border-relay-orange bg-relay-orange/5 dark:bg-relay-orange/10' : ''}`}
     >
-      {/* Header: Type + Key + Status */}
+      {/* Header: Checkbox + Type + Key + Status */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
+          {selectable && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggle?.();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-relay-orange focus:ring-relay-orange cursor-pointer"
+            />
+          )}
           <TypeIcon type={issue.type} />
           <span className="font-mono text-sm font-medium text-relay-orange">
             {issue.key}
@@ -228,26 +289,75 @@ function IssueCard({ issue, onClick }: { issue: Issue; onClick?: () => void }) {
   );
 }
 
-export function IssueList({ issues, isLoading, onIssueClick }: IssueListProps) {
+export function IssueList({
+  issues,
+  isLoading,
+  onIssueClick,
+  selectable,
+  selectedKeys,
+  onToggle,
+  onSelectAll,
+  hasFilters,
+  onClearFilters,
+  onCreateIssue,
+}: IssueListProps) {
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
   if (issues.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-          <ListTodo className="w-8 h-8 text-gray-400" />
+          {hasFilters ? (
+            <Search className="w-8 h-8 text-gray-400" />
+          ) : (
+            <ListTodo className="w-8 h-8 text-gray-400" />
+          )}
         </div>
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">
-          No issues found
+          {hasFilters ? 'No matching issues' : 'No issues yet'}
         </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Try adjusting your filters or search criteria
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
+          {hasFilters
+            ? 'Try adjusting your filters or search criteria to find what you\'re looking for.'
+            : 'Get started by creating your first issue to track bugs, tasks, or stories.'}
         </p>
+        <div className="flex items-center gap-3">
+          {hasFilters && onClearFilters && (
+            <button
+              onClick={onClearFilters}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+          {onCreateIssue && (
+            <button
+              onClick={onCreateIssue}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-relay-gradient rounded-lg hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" />
+              Create Issue
+            </button>
+          )}
+        </div>
       </div>
     );
   }
+
+  const allSelected = issues.length > 0 && issues.every((issue) => selectedKeys?.has(issue.key));
+  const someSelected = issues.some((issue) => selectedKeys?.has(issue.key));
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      // Deselect all visible issues
+      onSelectAll?.([]);
+    } else {
+      // Select all visible issues
+      onSelectAll?.(issues.map((issue) => issue.key));
+    }
+  };
 
   return (
     <>
@@ -256,6 +366,19 @@ export function IssueList({ issues, isLoading, onIssueClick }: IssueListProps) {
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              {selectable && (
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected && !allSelected;
+                    }}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-relay-orange focus:ring-relay-orange cursor-pointer"
+                  />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Issue
               </th>
@@ -282,6 +405,9 @@ export function IssueList({ issues, isLoading, onIssueClick }: IssueListProps) {
                 key={issue.key}
                 issue={issue}
                 onClick={() => onIssueClick?.(issue.key)}
+                selectable={selectable}
+                isSelected={selectedKeys?.has(issue.key)}
+                onToggle={() => onToggle?.(issue.key)}
               />
             ))}
           </tbody>
@@ -295,6 +421,9 @@ export function IssueList({ issues, isLoading, onIssueClick }: IssueListProps) {
             key={issue.key}
             issue={issue}
             onClick={() => onIssueClick?.(issue.key)}
+            selectable={selectable}
+            isSelected={selectedKeys?.has(issue.key)}
+            onToggle={() => onToggle?.(issue.key)}
           />
         ))}
       </div>

@@ -1,30 +1,30 @@
-import { useState } from 'react';
-import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { Radio, AlertCircle } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { LoadingSpinner } from '../components/Loading';
+import { useState } from "react";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { Radio, AlertCircle } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { LoadingSpinner } from "../components/Loading";
 
 export function LoginPage() {
-  const { signIn, isLoading } = useAuth();
+  const { signIn, loginAsGuest, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const handleSuccess = async (response: CredentialResponse) => {
     setError(null);
 
     if (!response.credential) {
-      setError('No credential received from Google');
+      setError("No credential received from Google");
       return;
     }
 
     try {
       await signIn(response.credential);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in');
+      setError(err instanceof Error ? err.message : "Failed to sign in");
     }
   };
 
   const handleError = () => {
-    setError('Google sign-in failed. Please try again.');
+    setError("Google sign-in failed. Please try again.");
   };
 
   if (isLoading) {
@@ -66,22 +66,33 @@ export function LoginPage() {
           )}
 
           {/* Google Sign in button */}
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-4">
             <GoogleLogin
               onSuccess={handleSuccess}
               onError={handleError}
               useOneTap
+              use_fedcm_for_prompt={false}
               theme="outline"
               size="large"
               width="320"
               text="signin_with"
               shape="rectangular"
             />
+
+            {import.meta.env.MODE === "development" && (
+              <button
+                onClick={loginAsGuest}
+                className="text-xs text-gray-400 hover:text-relay-orange transition-colors underline decoration-dotted underline-offset-4"
+              >
+                Dev: Bypass Google Login
+              </button>
+            )}
           </div>
 
           {/* Footer text */}
           <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            By signing in, you agree to access Relay with your company credentials.
+            By signing in, you agree to access Relay with your company
+            credentials.
           </p>
         </div>
       </div>

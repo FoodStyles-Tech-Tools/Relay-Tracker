@@ -1,11 +1,11 @@
-import { createContext } from 'react';
+import { createContext } from "react";
 
-export type UserRole = 'user' | 'sqa' | 'admin';
+export type UserRole = "user" | "sqa" | "admin";
 
 export interface UserPreferences {
   email_notifications: boolean;
   discord_notifications: boolean;
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
 }
 
 export interface AuthUser {
@@ -23,10 +23,13 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (credential: string) => Promise<void>;
+  loginAsGuest: () => void;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updatePreferences: (preferences: Partial<UserPreferences>) => Promise<void>;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);

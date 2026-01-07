@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, Radio, LogOut, User, ChevronDown, Shield, Users, Home, ListTodo } from 'lucide-react';
+import { Sun, Moon, Radio, LogOut, User, ChevronDown, Users, Home, ListTodo } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 
@@ -170,7 +170,11 @@ export function Navbar() {
                     {/* Menu items */}
                     <div className="py-1">
                       <button
-                        onClick={() => setIsDropdownOpen(false)}
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          window.history.pushState({}, '', '/profile');
+                          window.dispatchEvent(new PopStateEvent('popstate'));
+                        }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <User className="w-4 h-4" />
@@ -179,21 +183,15 @@ export function Navbar() {
 
                       {hasRole('admin') && (
                         <button
-                          onClick={() => setIsDropdownOpen(false)}
+                          onClick={() => {
+                            setIsDropdownOpen(false);
+                            window.history.pushState({}, '', '/admin');
+                            window.dispatchEvent(new PopStateEvent('popstate'));
+                          }}
                           className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                           <Users className="w-4 h-4" />
                           Manage Users
-                        </button>
-                      )}
-
-                      {hasRole(['admin', 'sqa']) && (
-                        <button
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          <Shield className="w-4 h-4" />
-                          Admin Panel
                         </button>
                       )}
                     </div>

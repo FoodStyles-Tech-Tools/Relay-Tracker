@@ -1,17 +1,77 @@
 """Jira Cloud API service for Relay.
 
 Provides functions to interact with Jira Cloud REST API v3.
+Includes in-memory caching for performance optimization.
 """
 
 import os
 import time
 import logging
+import hashlib
 from typing import Optional
 from datetime import datetime
 
 from atlassian import Jira
 
 logger = logging.getLogger(__name__)
+
+# =============================================================================
+# JIRA CACHE - Simple in-memory cache with TTL for issue list queries
+# =============================================================================
+
+CACHE_TTL_SECONDS = 300  # 5 minutes
+
+# Cache structure: { cache_key: { "data": ..., "expires_at": timestamp } }
+JIRA_CACHE: dict = {}
+
+
+def _get_cache_key(prefix: str, **kwargs) -> str:
+    """Generate a cache key from prefix and kwargs."""
+    sorted_items = sorted((k, v) for k, v in kwargs.items() if v is not None)
+    key_str = f"{prefix}:{sorted_items}"
+    return hashlib.md5(key_str.encode()).hexdigest()
+
+
+def _get_from_cache(cache_key: str) -> Optional[dict]:
+    """Get data from cache if not expired."""
+    entry = JIRA_CACHE.get(cache_key)
+    if entry and entry["expires_at"] > time.time():
+        logger.info(f"Cache HIT for key: {cache_key[:12]}...")
+        return entry["data"]
+    if entry:
+        # Expired, remove it
+        del JIRA_CACHE[cache_key]
+    return None
+
+
+def _set_cache(cache_key: str, data: dict) -> None:
+    """Store data in cache with TTL."""
+    JIRA_CACHE[cache_key] = {
+        "data": data,
+        "expires_at": time.time() + CACHE_TTL_SECONDS,
+    }
+    logger.info(f"Cache SET for key: {cache_key[:12]}... (TTL: {CACHE_TTL_SECONDS}s)")
+
+
+def _invalidate_cache(pattern: Optional[str] = None) -> None:
+    """
+    Invalidate cache entries.
+
+    Args:
+        pattern: If provided, only invalidate keys containing this pattern.
+                 If None, clear the entire cache.
+    """
+    global JIRA_CACHE
+    if pattern is None:
+        count = len(JIRA_CACHE)
+        JIRA_CACHE = {}
+        logger.info(f"Cache CLEARED ({count} entries)")
+    else:
+        keys_to_remove = [k for k in JIRA_CACHE.keys()]
+        for key in keys_to_remove:
+            del JIRA_CACHE[key]
+        if keys_to_remove:
+            logger.info(f"Cache INVALIDATED {len(keys_to_remove)} entries")
 
 # Singleton Jira client
 _jira_client: Optional[Jira] = None
@@ -80,6 +140,7 @@ def fetch_issues(
     search: Optional[str] = None,
     page: int = 1,
     limit: int = 50,
+    skip_cache: bool = False,
 ) -> dict:
     """
     Fetch issues from Jira with optional filters.
@@ -92,15 +153,36 @@ def fetch_issues(
         search: Search text for summary/description
         page: Page number (1-indexed)
         limit: Number of results per page (max 50)
+        skip_cache: If True, bypass cache and fetch fresh data
 
     Returns:
         Dict with issues, total, page, and totalPages
     """
+    # Check cache first (unless skip_cache is True)
+    cache_key = _get_cache_key(
+        "issues",
+        status=status,
+        priority=priority,
+        issue_type=issue_type,
+        reporter=reporter,
+        search=search,
+        page=page,
+        limit=limit,
+    )
+
+    if not skip_cache:
+        cached = _get_from_cache(cache_key)
+        if cached:
+            return cached
+
     jira = get_jira_client()
     project_key = get_project_key()
 
-    # Build JQL query
-    jql_parts = [f"project = '{project_key}'"]
+    # Build JQL query - Filter to only show issues created via Relay App
+    jql_parts = [
+        f"project = '{project_key}'",
+        '(labels = "relay-app" OR description ~ "Relay App")'
+    ]
 
     if status:
         statuses = [s.strip() for s in status.split(",")]
@@ -134,12 +216,17 @@ def fetch_issues(
     logger.info(f"Fetching issues with JQL: {jql}")
 
     def _fetch():
-        return jira.jql(
-            jql,
-            start=start_at,
-            limit=limit,
-            fields="key,summary,status,priority,issuetype,reporter,assignee,created,updated",
-        )
+        # Atlassian has deprecated /rest/api/3/search in favor of /rest/api/3/search/jql
+        # We use a raw request to ensure compatibility with the latest Jira Cloud requirement
+        path = "rest/api/3/search/jql"
+        params = {
+            "jql": jql,
+            "startAt": start_at,
+            "maxResults": limit,
+            "fields": "key,summary,status,priority,issuetype,reporter,assignee,created,updated",
+        }
+        response = jira.request(method="GET", path=path, params=params)
+        return response.json() if hasattr(response, 'json') else response
 
     result = _retry_with_backoff(_fetch)
 
@@ -170,12 +257,17 @@ def fetch_issues(
     total = result.get("total", 0)
     total_pages = (total + limit - 1) // limit if limit > 0 else 0
 
-    return {
+    response = {
         "issues": issues,
         "total": total,
         "page": page,
         "totalPages": total_pages,
     }
+
+    # Store in cache
+    _set_cache(cache_key, response)
+
+    return response
 
 
 def get_issue(issue_key: str) -> dict:
@@ -325,6 +417,7 @@ def create_issue(
         "description": description,
         "issuetype": {"name": issue_type},
         "priority": {"name": priority},
+        "labels": ["relay-app"],
     }
 
     logger.info(f"Creating issue in project {project_key}: {summary}")
@@ -335,6 +428,9 @@ def create_issue(
     result = _retry_with_backoff(_create)
 
     logger.info(f"Created issue: {result.get('key')}")
+
+    # Invalidate issue list cache when a new issue is created
+    _invalidate_cache()
 
     return {
         "key": result.get("key"),
@@ -382,6 +478,9 @@ def update_issue(issue_key: str, fields: dict) -> dict:
     if "status" in fields:
         transition_issue(issue_key, fields["status"])
 
+    # Invalidate cache when any issue is updated
+    _invalidate_cache()
+
     return {"key": issue_key}
 
 
@@ -424,6 +523,9 @@ def transition_issue(issue_key: str, target_status: str) -> dict:
         return jira.issue_transition(issue_key, transition_id)
 
     _retry_with_backoff(_transition)
+
+    # Invalidate cache when status changes
+    _invalidate_cache()
 
     return {"key": issue_key, "status": target_status}
 
@@ -539,16 +641,25 @@ def get_issues_updated_since(timestamp: str) -> list:
     except ValueError:
         jira_timestamp = timestamp
 
-    jql = f"project = '{project_key}' AND updated >= '{jira_timestamp}' ORDER BY updated DESC"
+    jql = (
+        f"project = '{project_key}' "
+        f"AND (labels = 'relay-app' OR description ~ 'Relay App') "
+        f"AND updated >= '{jira_timestamp}' "
+        f"ORDER BY updated DESC"
+    )
 
     logger.info(f"Fetching issues updated since {jira_timestamp}")
 
     def _fetch():
-        return jira.jql(
-            jql,
-            limit=100,
-            fields="key,summary,status,priority,updated",
-        )
+        # Migrate to new /search/jql endpoint
+        path = "rest/api/3/search/jql"
+        params = {
+            "jql": jql,
+            "maxResults": 100,
+            "fields": "key,summary,status,priority,updated",
+        }
+        response = jira.request(method="GET", path=path, params=params)
+        return response.json() if hasattr(response, 'json') else response
 
     result = _retry_with_backoff(_fetch)
 

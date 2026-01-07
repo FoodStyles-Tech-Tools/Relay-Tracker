@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request, g
 
 from api.utils.auth import require_auth, require_role, log_activity
 from api.utils.template_builder import parse_user_agent
+from api.services.email_service import notify_issue_created, notify_status_changed, notify_comment_added
 from api.services.jira_service import (
     fetch_issues,
     get_issue,
@@ -161,6 +162,16 @@ def create_new_issue():
             },
         )
 
+        # Send email notification (async-safe, won't block response)
+        notify_issue_created(
+            reporter_email=user["email"],
+            issue_key=result["key"],
+            summary=data["summary"],
+            description=data["details"],
+            issue_type=data["type"],
+            priority=data["priority"]
+        )
+
         return jsonify(result), 201
 
     except Exception as e:
@@ -206,6 +217,15 @@ def update_existing_issue(issue_key: str):
             if data["priority"] not in valid_priorities:
                 return jsonify({"error": f"Invalid priority. Must be one of: {valid_priorities}"}), 400
 
+        # Get current issue state before update (for status change notification)
+        old_status = None
+        if "status" in data:
+            try:
+                current_issue = get_issue(issue_key)
+                old_status = current_issue.get("status")
+            except:
+                pass
+
         result = update_issue(issue_key, data)
 
         # Log the activity
@@ -215,6 +235,23 @@ def update_existing_issue(issue_key: str):
             jira_issue_key=issue_key,
             metadata={"fields_updated": list(data.keys())},
         )
+
+        # Send status change notification if status was updated
+        if "status" in data and old_status and old_status != data["status"]:
+            try:
+                issue = get_issue(issue_key)
+                reporter_email = issue.get("reporter", {}).get("email")
+                if reporter_email:
+                    notify_status_changed(
+                        reporter_email=reporter_email,
+                        issue_key=issue_key,
+                        summary=issue.get("summary", ""),
+                        old_status=old_status,
+                        new_status=data["status"]
+                    )
+            except:
+                # Don't fail the request if notification fails
+                pass
 
         return jsonify(result)
 
@@ -256,6 +293,23 @@ def add_issue_comment(issue_key: str):
             "add_comment",
             jira_issue_key=issue_key,
         )
+
+        # Send email notification to reporter (if different from commenter)
+        try:
+            issue = get_issue(issue_key)
+            reporter_email = issue.get("reporter", {}).get("email")
+            if reporter_email:
+                notify_comment_added(
+                    reporter_email=reporter_email,
+                    commenter_email=user["email"],
+                    issue_key=issue_key,
+                    summary=issue.get("summary", ""),
+                    comment_body=data["body"],
+                    commenter_name=user.get("name")
+                )
+        except Exception as e:
+            # Don't fail the request if notification fails
+            pass
 
         return jsonify(result), 201
 
@@ -359,6 +413,80 @@ def delete_issue(issue_key: str):
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"Failed to cancel issue: {str(e)}"}), 500
+
+
+@issues_bp.route("/bulk/status", methods=["POST"])
+@require_auth
+@require_role("sqa", "admin")
+def bulk_update_status():
+    """
+    Bulk update status for multiple issues.
+
+    Only available to SQA and Admin roles.
+
+    Request body:
+        {
+            "issue_keys": ["KEY-1", "KEY-2", ...],
+            "status": "Done"
+        }
+
+    Returns:
+        { updated: number, failed: ["KEY-3", ...] }
+    """
+    user = g.user
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    issue_keys = data.get("issue_keys", [])
+    new_status = data.get("status")
+
+    if not issue_keys or not isinstance(issue_keys, list):
+        return jsonify({"error": "issue_keys must be a non-empty array"}), 400
+
+    if not new_status:
+        return jsonify({"error": "status is required"}), 400
+
+    from api.services.jira_service import transition_issue
+
+    updated = 0
+    failed = []
+
+    for issue_key in issue_keys:
+        try:
+            # Get current issue state for notification
+            current_issue = get_issue(issue_key)
+            old_status = current_issue.get("status")
+
+            # Transition the issue
+            transition_issue(issue_key, new_status)
+            updated += 1
+
+            # Log the activity
+            log_activity(
+                user["user_id"],
+                "bulk_update_status",
+                jira_issue_key=issue_key,
+                metadata={"old_status": old_status, "new_status": new_status},
+            )
+
+            # Send notification if status changed
+            if old_status and old_status != new_status:
+                reporter_email = current_issue.get("reporter", {}).get("email")
+                if reporter_email:
+                    notify_status_changed(
+                        reporter_email=reporter_email,
+                        issue_key=issue_key,
+                        summary=current_issue.get("summary", ""),
+                        old_status=old_status,
+                        new_status=new_status
+                    )
+
+        except Exception as e:
+            failed.append(issue_key)
+
+    return jsonify({"updated": updated, "failed": failed})
 
 
 @issues_bp.route("/updates", methods=["GET"])

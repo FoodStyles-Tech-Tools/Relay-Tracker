@@ -165,3 +165,35 @@ export async function addComment(
     { body }
   );
 }
+
+// Admin API
+import type { UserRole, AuthUser } from "../context/auth-context";
+
+export async function fetchUsers(): Promise<AuthUser[]> {
+  const data = await api.get<{ users: AuthUser[]; total: number }>(
+    "/api/auth/users"
+  );
+  return data.users;
+}
+
+export async function updateUserRole(
+  userId: string,
+  role: UserRole
+): Promise<{ message: string }> {
+  return api.put<{ message: string }>(`/api/auth/users/${userId}/role`, {
+    role,
+  });
+}
+
+// Bulk Operations API
+import type { IssueStatus } from "../types";
+
+export async function bulkUpdateIssueStatus(
+  issueKeys: string[],
+  status: IssueStatus
+): Promise<{ updated: number; failed: string[] }> {
+  return api.post<{ updated: number; failed: string[] }>("/api/issues/bulk/status", {
+    issue_keys: issueKeys,
+    status,
+  });
+}

@@ -17,11 +17,14 @@ const PRIORITY_OPTIONS: IssuePriority[] = ['Highest', 'High', 'Medium', 'Low', '
 const TYPE_OPTIONS: IssueType[] = ['Bug', 'Task', 'Story'];
 
 // Status colors for pills
-const statusColors: Record<IssueStatus, string> = {
+const statusColors: Record<string, string> = {
   'Open': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  'To Do': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   'In Progress': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
   'In Review': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
   'Done': 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  'Resolved': 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  'Closed': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
   'Cancelled': 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
 };
 

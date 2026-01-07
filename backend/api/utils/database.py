@@ -58,7 +58,28 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
     conn = get_connection()
     result = conn.execute(
         "SELECT user_id, email, name, avatar_url, role, created_at, updated_at FROM user_roles WHERE user_id = ?",
-        [user_id]
+        (user_id,)
+    ).fetchone()
+
+    if result:
+        return {
+            "user_id": result[0],
+            "email": result[1],
+            "name": result[2],
+            "avatar_url": result[3],
+            "role": result[4],
+            "created_at": result[5],
+            "updated_at": result[6],
+        }
+    return None
+
+
+def get_user_by_email(email: str) -> Optional[dict]:
+    """Get a user by their email address."""
+    conn = get_connection()
+    result = conn.execute(
+        "SELECT user_id, email, name, avatar_url, role, created_at, updated_at FROM user_roles WHERE email = ?",
+        (email,)
     ).fetchone()
 
     if result:
@@ -86,14 +107,14 @@ def create_user(user_id: str, email: str, name: str = None, avatar_url: str = No
     conn.execute(
         """INSERT INTO user_roles (user_id, email, name, avatar_url, role)
            VALUES (?, ?, ?, ?, ?)""",
-        [user_id, email, name, avatar_url, role]
+        (user_id, email, name, avatar_url, role)
     )
 
     # Insert default preferences
     conn.execute(
         """INSERT INTO user_preferences (user_id, email_notifications, discord_notifications, theme)
            VALUES (?, 1, 1, 'system')""",
-        [user_id]
+        (user_id,)
     )
 
     conn.commit()
@@ -109,7 +130,7 @@ def get_or_create_user(user_id: str, email: str, name: str = None, avatar_url: s
         conn = get_connection()
         conn.execute(
             """UPDATE user_roles SET email = ?, name = ?, avatar_url = ? WHERE user_id = ?""",
-            [email, name, avatar_url, user_id]
+            (email, name, avatar_url, user_id)
         )
         conn.commit()
         return get_user_by_id(user_id)
@@ -121,7 +142,7 @@ def get_user_preferences(user_id: str) -> Optional[dict]:
     conn = get_connection()
     result = conn.execute(
         """SELECT email_notifications, discord_notifications, theme FROM user_preferences WHERE user_id = ?""",
-        [user_id]
+        (user_id,)
     ).fetchone()
 
     if result:
@@ -156,7 +177,7 @@ def update_user_preferences(user_id: str, **kwargs) -> dict:
         values.append(user_id)
         conn.execute(
             f"UPDATE user_preferences SET {', '.join(updates)} WHERE user_id = ?",
-            values
+            tuple(values)
         )
         conn.commit()
 
@@ -168,7 +189,7 @@ def update_user_role(user_id: str, role: str) -> Optional[dict]:
     conn = get_connection()
     conn.execute(
         "UPDATE user_roles SET role = ? WHERE user_id = ?",
-        [role, user_id]
+        (role, user_id)
     )
     conn.commit()
     return get_user_by_id(user_id)
@@ -200,6 +221,6 @@ def log_activity(user_id: str, action: str, jira_issue_key: str = None, metadata
     conn.execute(
         """INSERT INTO activity_log (user_id, action, jira_issue_key, metadata)
            VALUES (?, ?, ?, ?)""",
-        [user_id, action, jira_issue_key, json.dumps(metadata or {})]
+        (user_id, action, jira_issue_key, json.dumps(metadata or {}))
     )
     conn.commit()

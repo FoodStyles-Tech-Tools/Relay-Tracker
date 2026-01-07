@@ -1,15 +1,40 @@
-import { useState, useEffect } from 'react';
-import { GoogleOAuthProvider } from '@react-oauth/google';
-import { MainLayout, ErrorBoundary, LoadingPage, ProtectedRoute, ToastContainer, useToasts, showToast } from './components';
-import { AuthProvider } from './context/AuthContext';
-import { useAuth } from './hooks/useAuth';
-import { checkHealth } from './lib/api';
-import { IssuesPage } from './pages/Issues';
-import { IssueDetailPage } from './pages/IssueDetail';
-import { CreateIssueModal } from './components/issues';
-import { Radio, CheckCircle, XCircle, Bug, ListTodo, BookOpen } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import {
+  MainLayout,
+  ErrorBoundary,
+  LoadingPage,
+  ProtectedRoute,
+  ToastContainer,
+  useToasts,
+  showToast,
+} from "./components";
+import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from "./hooks/useAuth";
+import { checkHealth } from "./lib/api";
+import { IssuesPage } from "./pages/Issues";
+import { IssueDetailPage } from "./pages/IssueDetail";
+import { ProfilePage } from "./pages/Profile";
+import { AdminSettingsPage } from "./pages/AdminSettings";
+import { CreateIssueModal } from "./components/issues";
+import {
+  Radio,
+  CheckCircle,
+  XCircle,
+  Bug,
+  ListTodo,
+  BookOpen,
+} from "lucide-react";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
+
+console.log("🏛️ Relay Auth Debug:", {
+  origin: window.location.origin,
+  clientId: GOOGLE_CLIENT_ID,
+  backendUrl: import.meta.env.VITE_API_URL || "http://localhost:5001",
+  hasClientId: !!GOOGLE_CLIENT_ID,
+  nodeEnv: import.meta.env.MODE,
+});
 
 // Simple hash-based routing
 function useRoute() {
@@ -17,12 +42,12 @@ function useRoute() {
 
   useEffect(() => {
     const handlePopState = () => setRoute(window.location.pathname);
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const navigate = (path: string) => {
-    window.history.pushState({}, '', path);
+    window.history.pushState({}, "", path);
     setRoute(path);
   };
 
@@ -31,18 +56,20 @@ function useRoute() {
 
 function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { user } = useAuth();
-  const [healthStatus, setHealthStatus] = useState<'loading' | 'ok' | 'error'>('loading');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [healthStatus, setHealthStatus] = useState<"loading" | "ok" | "error">(
+    "loading"
+  );
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handleIssueCreated = (issueKey: string) => {
     setIsCreateModalOpen(false);
     showToast({
-      type: 'success',
+      type: "success",
       title: `Issue ${issueKey} created!`,
-      message: 'Your issue has been submitted successfully.',
+      message: "Your issue has been submitted successfully.",
       action: {
-        label: 'View Issue',
+        label: "View Issue",
         onClick: () => onNavigate(`/issues/${issueKey}`),
       },
     });
@@ -54,15 +81,19 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
     const checkBackendHealth = async () => {
       try {
         const response = await checkHealth();
-        if (response.status === 'ok') {
-          setHealthStatus('ok');
+        if (response.status === "ok") {
+          setHealthStatus("ok");
         } else {
-          setHealthStatus('error');
-          setErrorMessage('Unexpected response from server');
+          setHealthStatus("error");
+          setErrorMessage("Unexpected response from server");
         }
       } catch (error) {
-        setHealthStatus('error');
-        setErrorMessage(error instanceof Error ? error.message : 'Failed to connect to backend');
+        setHealthStatus("error");
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to connect to backend"
+        );
       }
     };
 
@@ -80,7 +111,10 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
             </div>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">
-            Welcome back, <span className="text-relay-gradient">{user?.name?.split(' ')[0] || 'User'}</span>
+            Welcome back,{" "}
+            <span className="text-relay-gradient">
+              {user?.name?.split(" ")[0] || "User"}
+            </span>
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-md mx-auto">
             Fast track from report to resolution
@@ -94,23 +128,20 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
               System Status
             </h2>
 
-            {healthStatus === 'loading' && <LoadingPage />}
+            {healthStatus === "loading" && <LoadingPage />}
 
-            {healthStatus === 'ok' && (
+            {healthStatus === "ok" && (
               <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                 <div>
                   <p className="font-medium text-green-800 dark:text-green-200">
                     Backend Connected
                   </p>
-                  <p className="text-sm text-green-600 dark:text-green-400">
-                    All systems operational
-                  </p>
                 </div>
               </div>
             )}
 
-            {healthStatus === 'error' && (
+            {healthStatus === "error" && (
               <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                 <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
                 <div>
@@ -118,7 +149,7 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
                     Backend Unavailable
                   </p>
                   <p className="text-sm text-red-600 dark:text-red-400">
-                    {errorMessage || 'Unable to connect to server'}
+                    {errorMessage || "Unable to connect to server"}
                   </p>
                 </div>
               </div>
@@ -159,7 +190,7 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
           </button>
 
           <button
-            onClick={() => onNavigate('/issues')}
+            onClick={() => onNavigate("/issues")}
             className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left"
           >
             <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4 group-hover:bg-relay-gradient transition-colors">
@@ -193,16 +224,23 @@ function AppRouter() {
   if (issueDetailMatch) {
     const issueKey = issueDetailMatch[1];
     return (
-      <IssueDetailPage
-        issueKey={issueKey}
-        onBack={() => navigate('/issues')}
-      />
+      <IssueDetailPage issueKey={issueKey} onBack={() => navigate("/issues")} />
     );
   }
 
   // Match issues list route
-  if (route === '/issues' || route.startsWith('/issues?')) {
+  if (route === "/issues" || route.startsWith("/issues?")) {
     return <IssuesPage />;
+  }
+
+  // Match profile route
+  if (route === "/profile") {
+    return <ProfilePage />;
+  }
+
+  // Match admin route
+  if (route === "/admin") {
+    return <AdminSettingsPage />;
   }
 
   return <Dashboard onNavigate={navigate} />;

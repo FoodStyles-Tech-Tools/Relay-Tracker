@@ -1,20 +1,53 @@
-import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
-import type { IssueStatus } from '../../types';
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown, Check } from "lucide-react";
+import type { IssueStatus } from "../../types";
 
 interface StatusDropdownProps {
   value: IssueStatus | null;
   onChange: (status: IssueStatus) => void;
 }
 
-const STATUS_OPTIONS: IssueStatus[] = ['Open', 'In Progress', 'In Review', 'Done', 'Cancelled'];
+const STATUS_OPTIONS: IssueStatus[] = [
+  "Open",
+  "In Progress",
+  "In Review",
+  "Done",
+  "Cancelled",
+];
 
-const statusColors: Record<IssueStatus, { bg: string; text: string }> = {
-  'Open': { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-  'In Progress': { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
-  'In Review': { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
-  'Done': { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
-  'Cancelled': { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-400' },
+const statusColors: Record<string, { bg: string; text: string }> = {
+  Open: {
+    bg: "bg-blue-100 dark:bg-blue-900/30",
+    text: "text-blue-700 dark:text-blue-300",
+  },
+  "To Do": {
+    bg: "bg-blue-100 dark:bg-blue-900/30",
+    text: "text-blue-700 dark:text-blue-300",
+  },
+  "In Progress": {
+    bg: "bg-yellow-100 dark:bg-yellow-900/30",
+    text: "text-yellow-700 dark:text-yellow-300",
+  },
+  "In Review": {
+    bg: "bg-purple-100 dark:bg-purple-900/30",
+    text: "text-purple-700 dark:text-purple-300",
+  },
+  Done: {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-700 dark:text-green-300",
+  },
+  Resolved: {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-700 dark:text-green-300",
+  },
+  Cancelled: {
+    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-700 dark:text-gray-400",
+  },
+  Closed: {
+    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-700 dark:text-gray-400",
+  },
 };
 
 export function StatusDropdown({ value, onChange }: StatusDropdownProps) {
@@ -24,13 +57,16 @@ export function StatusDropdown({ value, onChange }: StatusDropdownProps) {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleSelect = (status: IssueStatus) => {
@@ -38,7 +74,10 @@ export function StatusDropdown({ value, onChange }: StatusDropdownProps) {
     setIsOpen(false);
   };
 
-  const currentColors = value ? statusColors[value] : { bg: 'bg-gray-100', text: 'text-gray-500' };
+  const currentColors = (value && statusColors[value]) || {
+    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-700 dark:text-gray-400",
+  };
 
   return (
     <div ref={dropdownRef} className="relative">
@@ -46,8 +85,12 @@ export function StatusDropdown({ value, onChange }: StatusDropdownProps) {
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors ${currentColors.bg} ${currentColors.text} hover:opacity-80`}
       >
-        {value || 'Unknown'}
-        <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        {value || "Unknown"}
+        <ChevronDown
+          className={`w-3 h-3 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {isOpen && (
@@ -62,7 +105,9 @@ export function StatusDropdown({ value, onChange }: StatusDropdownProps) {
                 onClick={() => handleSelect(status)}
                 className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
               >
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}
+                >
                   {status}
                 </span>
                 {isSelected && <Check className="w-4 h-4 text-relay-orange" />}

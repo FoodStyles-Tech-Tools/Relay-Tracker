@@ -4,7 +4,7 @@ export interface User {
   email: string;
   name: string;
   avatar_url?: string;
-  role: 'user' | 'sqa' | 'admin';
+  role: "user" | "sqa" | "admin";
   created_at: string;
 }
 
@@ -13,14 +13,23 @@ export interface UserPreferences {
   user_id: string;
   email_notifications: boolean;
   discord_notifications: boolean;
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   created_at: string;
 }
 
 // Issue types
-export type IssueType = 'Bug' | 'Task' | 'Story';
-export type IssuePriority = 'Highest' | 'High' | 'Medium' | 'Low' | 'Lowest';
-export type IssueStatus = 'Open' | 'In Progress' | 'In Review' | 'Done' | 'Cancelled';
+export type IssueType = "Bug" | "Task" | "Story";
+export type IssuePriority = "Highest" | "High" | "Medium" | "Low" | "Lowest";
+export type IssueStatus =
+  | "Open"
+  | "To Do"
+  | "In Progress"
+  | "In Review"
+  | "Done"
+  | "Resolved"
+  | "Cancelled"
+  | "Closed"
+  | (string & {});
 
 export interface IssueUser {
   email: string | null;
