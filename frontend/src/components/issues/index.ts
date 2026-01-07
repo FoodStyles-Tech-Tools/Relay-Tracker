@@ -7,3 +7,4 @@ export { CommentForm } from './CommentForm';
 export { ActivityTimeline } from './ActivityTimeline';
 export { StatusDropdown } from './StatusDropdown';
 export { PriorityDropdown } from './PriorityDropdown';
+export { CreateIssueModal } from './CreateIssueModal';

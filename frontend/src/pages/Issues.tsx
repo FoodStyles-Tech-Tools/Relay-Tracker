@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
-import { MainLayout } from '../components';
-import { IssueList, FilterBar, SearchBar, Pagination } from '../components/issues';
+import { MainLayout, showToast } from '../components';
+import { IssueList, FilterBar, SearchBar, Pagination, CreateIssueModal } from '../components/issues';
 import { fetchIssues, type IssuesResponse } from '../lib/api';
 import type { Issue, IssueType, IssuePriority, IssueStatus } from '../types';
 
@@ -151,6 +151,25 @@ export function IssuesPage() {
     loadIssues();
   }, [loadIssues]);
 
+  // Create Issue Modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const handleIssueCreated = useCallback((issueKey: string) => {
+    setIsCreateModalOpen(false);
+    showToast({
+      type: 'success',
+      title: `Issue ${issueKey} created!`,
+      message: 'Your issue has been submitted successfully.',
+      action: {
+        label: 'View Issue',
+        onClick: () => handleIssueClick(issueKey),
+      },
+    });
+    // Refresh the list and navigate to the new issue
+    loadIssues();
+    setTimeout(() => handleIssueClick(issueKey), 1500);
+  }, [handleIssueClick, loadIssues]);
+
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto">
@@ -180,7 +199,10 @@ export function IssuesPage() {
             </button>
 
             {/* Create issue button */}
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-relay-gradient rounded-lg hover:opacity-90 transition-opacity shadow-sm">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-relay-gradient rounded-lg hover:opacity-90 transition-opacity shadow-sm"
+            >
               <Plus className="w-4 h-4" />
               New Issue
             </button>
@@ -239,6 +261,13 @@ export function IssuesPage() {
           />
         )}
       </div>
+
+      {/* Create Issue Modal */}
+      <CreateIssueModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleIssueCreated}
+      />
     </MainLayout>
   );
 }

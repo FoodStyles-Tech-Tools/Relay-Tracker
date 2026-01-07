@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5173/issues",
+  "executionArgs": {
+    "projectName": "Relay-Tracker",
+    "projectPath": "/Users/romand/Documents/GitHub/Relay-Tracker",
+    "testIds": [],
+    "additionalInstruction": "Focus on verifying Mission 4 & 5 requirements: 1) List Rendering & Search - Navigate to /issues, enter search term, verify list filters correctly using debounced API call. 2) Navigation & Detail View - Click an issue in the list, verify transition to detail page, confirm SQA template renders correctly. 3) Collaboration UI - Verify comments and activity timeline are visible on the detail page. 4) Role Enforcement - Ensure Edit Status buttons are NOT visible for standard users.",
+    "envs": {
+      "API_KEY": "sk-user-XwFlNFr3C7cQACVvGRrvcsu3Z_Ntzu0EsrDkTDooguZ-gVn3SoeGktLdRN7bf2kyEsX8NejTus3Tr2WXauTvZTTNvd9alp5ynGoyDQKLzgCdjIXd708MG3NavL8hfNygSe0"
+    }
+  },
+  "proxy": "http://be7a3625-47de-4623-a7a7-68e7e6a16d70:kbm2xUCKJrwbdspYjB1VfiLwCQ79vpyW@tun.testsprite.com:8080"
+}

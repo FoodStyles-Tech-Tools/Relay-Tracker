@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { MainLayout, ErrorBoundary, LoadingPage, ProtectedRoute } from './components';
+import { MainLayout, ErrorBoundary, LoadingPage, ProtectedRoute, ToastContainer, useToasts, showToast } from './components';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import { checkHealth } from './lib/api';
 import { IssuesPage } from './pages/Issues';
 import { IssueDetailPage } from './pages/IssueDetail';
+import { CreateIssueModal } from './components/issues';
 import { Radio, CheckCircle, XCircle, Bug, ListTodo, BookOpen } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -32,6 +33,22 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { user } = useAuth();
   const [healthStatus, setHealthStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  const handleIssueCreated = (issueKey: string) => {
+    setIsCreateModalOpen(false);
+    showToast({
+      type: 'success',
+      title: `Issue ${issueKey} created!`,
+      message: 'Your issue has been submitted successfully.',
+      action: {
+        label: 'View Issue',
+        onClick: () => onNavigate(`/issues/${issueKey}`),
+      },
+    });
+    // Navigate to the issue detail page after a brief delay
+    setTimeout(() => onNavigate(`/issues/${issueKey}`), 1500);
+  };
 
   useEffect(() => {
     const checkBackendHealth = async () => {
@@ -111,7 +128,10 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full">
-          <button className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left"
+          >
             <div className="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4 group-hover:bg-relay-gradient transition-colors">
               <Bug className="w-6 h-6 text-red-600 dark:text-red-400 group-hover:text-white" />
             </div>
@@ -123,7 +143,10 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
             </p>
           </button>
 
-          <button className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left"
+          >
             <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4 group-hover:bg-relay-gradient transition-colors">
               <ListTodo className="w-6 h-6 text-blue-600 dark:text-blue-400 group-hover:text-white" />
             </div>
@@ -151,6 +174,13 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
           </button>
         </div>
       </div>
+
+      {/* Create Issue Modal */}
+      <CreateIssueModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleIssueCreated}
+      />
     </MainLayout>
   );
 }
@@ -178,6 +208,11 @@ function AppRouter() {
   return <Dashboard onNavigate={navigate} />;
 }
 
+function ToastWrapper() {
+  const { toasts, remove } = useToasts();
+  return <ToastContainer toasts={toasts} onRemove={remove} />;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -186,6 +221,7 @@ function App() {
           <ProtectedRoute>
             <AppRouter />
           </ProtectedRoute>
+          <ToastWrapper />
         </AuthProvider>
       </GoogleOAuthProvider>
     </ErrorBoundary>

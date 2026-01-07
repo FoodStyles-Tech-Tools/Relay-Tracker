@@ -1,23 +1,28 @@
-# Mission 4 & 5: Issue Dashboard & Detail View Verification
+# Mission 6: Issue Creation (Surgical Implementation Spec)
 
 ## 1. Context & Constraints
 
-- **Objective:** Verify the full "Read" lifecycle of Relay issues—from the filterable list to the deep detail view.
-- **Focus:** Ensure UI precision, debounced search, and multi-pane detail rendering.
+- **Objective:** Implement the "New Issue" modal that handles the full bug reporting lifecycle.
+- **Focus:** Pure passthrough to Jira with automatic environment detection.
 
-## 2. Architecture & Data Model
+## 2. Technical Map (Surgical)
 
-- **List View**: `/api/issues` with query params.
-- **Detail View**: `/api/issues/<key>` with comments and history.
+- **Creation Component**: `src/components/issues/CreateIssueModal.tsx` [NEW]
+- **Integration Point**: `src/pages/Issues.tsx` (Add modal state and trigger).
+- **API Service**: `src/lib/api.ts` -> use existing `createIssue` function.
+- **Backend Endpoint**: `POST /api/issues` (handled by `backend/api/routes/issues.py`).
 
-## 3. Verification & Testing (Optimized Suite)
+## 3. Implementation Logic
 
-- **Linter Check:** `npm run lint`.
-- **CRITICAL Test Scenarios:**
-  1. **"List Rendering & Search"**: "Navigate to Dashboard -> Enter search term -> Verify list filters correctly using debounced API call."
-  2. **"Navigation & Detail View"**: "Click an issue in the list -> Verify transition to detail page -> Confirm SQA template renders correctly."
-  3. **"Collaboration UI"**: "Verify comments and activity timeline are visible on the detail page."
-  4. **"Role Enforcement"**: "Ensure 'Edit Status' buttons are NOT visible for standard users."
+- **Validation**:
+  - `summary`: Required, max 255 chars.
+  - `details`: Required, min 10 chars.
+  - `type`/`priority`: Default to 'Bug'/'Medium'.
+- **Handshake**:
+  - Frontend: Send `summary`, `details`, `type`, `priority`, `attachmentLinks` in JSON.
+  - Backend: Merges `details` into the SQA Template using `User-Agent`. No frontend environment detection needed.
 
-> [!NOTE]
-> We are grouping these two missions for verification to save usage, as they share the same underlying data flow.
+## 4. Verification Flow
+
+- **Redirection**: On successful creation (HTTP 201), the app MUST navigate to `/issues/<new-key>`.
+- **Testing**: Linter must pass `npm run lint`.
