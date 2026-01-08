@@ -71,15 +71,7 @@ OS: {os_info}
 *Reporter:* {user_email}
 
 *Reported via:* Relay App
-*Timestamp:* {timestamp}
-
-----
-*IF YOU ARE EXPERIENCING SLOWDOWNS READ THIS:*
-1. During our BEB recording, without stopping it, open the link to Ookla's Speedtest.
-2. Press the "GO" button.
-3. Wait until the test is finished.
-4. Finish the BEB recording.
-Note: Please share the whole screen and not just a tab when recording so BEB can catch what happens during the speed test."""
+*Timestamp:* {timestamp}"""
 
     return template
 

@@ -1,12 +1,22 @@
-import { useState, useCallback, useRef } from 'react';
-import { X, Bug, ListTodo, BookOpen, Upload, File, Loader2, AlertCircle, Check } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { X, Bug, ListTodo, BookOpen, Upload, File, Loader2, AlertCircle, Check, Info } from 'lucide-react';
 import type { IssueType, IssuePriority } from '../../types';
 import { createIssue } from '../../lib/api';
+
+const DRAFT_KEY = 'relay_issue_draft';
+
+interface DraftData {
+  summary: string;
+  details: string;
+  priority: IssuePriority;
+  type: IssueType | null;
+}
 
 interface CreateIssueModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (issueKey: string) => void;
+  initialType?: IssueType;
 }
 
 interface FormErrors {
@@ -39,7 +49,7 @@ const PRIORITY_OPTIONS: { value: IssuePriority; label: string; color: string }[]
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'pdf', 'mp4', 'webm', 'mov', 'avi', 'zip', 'rar', '7z', 'txt', 'log', 'json', 'xml'];
 
-export function CreateIssueModal({ isOpen, onClose, onSuccess }: CreateIssueModalProps) {
+export function CreateIssueModal({ isOpen, onClose, onSuccess, initialType }: CreateIssueModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [type, setType] = useState<IssueType | null>(null);
   const [summary, setSummary] = useState('');
@@ -51,8 +61,63 @@ export function CreateIssueModal({ isOpen, onClose, onSuccess }: CreateIssueModa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const saveDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load draft from localStorage when modal opens
+  useEffect(() => {
+    if (isOpen && !draftLoaded) {
+      try {
+        const saved = localStorage.getItem(DRAFT_KEY);
+        if (saved) {
+          const draft: DraftData = JSON.parse(saved);
+          setSummary(draft.summary || '');
+          setDetails(draft.details || '');
+          setPriority(draft.priority || 'Medium');
+          // If initialType is provided, use it; otherwise use draft type
+          if (initialType) {
+            setType(initialType);
+            setStep(2);
+          } else if (draft.type) {
+            setType(draft.type);
+            setStep(2);
+          }
+        } else if (initialType) {
+          // No draft but initialType provided
+          setType(initialType);
+          setStep(2);
+        }
+      } catch {
+        // Invalid draft, ignore
+      }
+      setDraftLoaded(true);
+    }
+  }, [isOpen, draftLoaded, initialType]);
+
+  // Save draft to localStorage (debounced 500ms)
+  const saveDraft = useCallback(() => {
+    if (saveDraftTimeoutRef.current) {
+      clearTimeout(saveDraftTimeoutRef.current);
+    }
+    saveDraftTimeoutRef.current = setTimeout(() => {
+      const draft: DraftData = { summary, details, priority, type };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    }, 500);
+  }, [summary, details, priority, type]);
+
+  // Trigger save on field changes
+  useEffect(() => {
+    if (draftLoaded && isOpen) {
+      saveDraft();
+    }
+  }, [summary, details, priority, type, draftLoaded, isOpen, saveDraft]);
+
+  // Clear draft on successful submission
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+  }, []);
 
   const validateField = useCallback((field: string, value: string) => {
     const newErrors: FormErrors = { ...errors };
@@ -179,7 +244,8 @@ export function CreateIssueModal({ isOpen, onClose, onSuccess }: CreateIssueModa
         attachmentLinks: attachmentLinks || undefined,
       });
 
-      // Success!
+      // Success! Clear the draft
+      clearDraft();
       onSuccess(result.key);
       resetForm();
     } catch (error) {
@@ -199,6 +265,7 @@ export function CreateIssueModal({ isOpen, onClose, onSuccess }: CreateIssueModa
     setErrors({});
     setTouched({});
     setSubmitError(null);
+    setDraftLoaded(false);
   };
 
   const handleClose = () => {
@@ -354,6 +421,15 @@ export function CreateIssueModal({ isOpen, onClose, onSuccess }: CreateIssueModa
                       <span className={option.color}>{option.label}</span>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* BEB Recording Info Alert */}
+              <div className="flex gap-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-blue-800 dark:text-blue-300">
+                  <p className="font-medium mb-1">Recording Performance Issues?</p>
+                  <p>If you are reporting a slowdown, please keep your BEB recording running, run a Speedtest, and then stop the recording.</p>
                 </div>
               </div>
 

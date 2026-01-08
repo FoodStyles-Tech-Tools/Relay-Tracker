@@ -18,6 +18,15 @@ export interface UserPreferences {
 }
 
 // Issue types
+export type Tool =
+  | "AI"
+  | "Curator"
+  | "Metadata"
+  | "AutoEat"
+  | "Himera"
+  | "Mobile App"
+  | "MenuCurator"
+  | "Reports";
 export type IssueType = "Bug" | "Task" | "Story";
 export type IssuePriority = "Highest" | "High" | "Medium" | "Low" | "Lowest";
 export type IssueStatus =
@@ -103,6 +112,7 @@ export interface IssueFilters {
   type?: IssueType[];
   reporter?: string;
   search?: string;
+  tool?: Tool[];
   page?: number;
   limit?: number;
 }

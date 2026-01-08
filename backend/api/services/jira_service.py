@@ -136,6 +136,7 @@ def fetch_issues(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     issue_type: Optional[str] = None,
+    tool: Optional[str] = None,
     reporter: Optional[str] = None,
     search: Optional[str] = None,
     page: int = 1,
@@ -149,6 +150,7 @@ def fetch_issues(
         status: Comma-separated status values (e.g., "Open,In Progress")
         priority: Comma-separated priority values (e.g., "Highest,High")
         issue_type: Comma-separated issue types (e.g., "Bug,Task")
+        tool: Comma-separated tool names (e.g., "AI,Curator")
         reporter: Reporter email address
         search: Search text for summary/description
         page: Page number (1-indexed)
@@ -164,6 +166,7 @@ def fetch_issues(
         status=status,
         priority=priority,
         issue_type=issue_type,
+        tool=tool,
         reporter=reporter,
         search=search,
         page=page,
@@ -198,6 +201,18 @@ def fetch_issues(
         types = [t.strip() for t in issue_type.split(",")]
         type_jql = ", ".join([f'"{t}"' for t in types])
         jql_parts.append(f"issuetype IN ({type_jql})")
+
+    if tool:
+        tool_names = [t.strip() for t in tool.split(",")]
+        tool_conditions = []
+        for t in tool_names:
+            # Check for label OR tool name in summary
+            # Simplified JQL: labels = "AI" OR summary ~ "AI"
+            tool_conditions.append(f'(labels = "{t}" OR summary ~ "\\"{t}\\"")')
+
+        if tool_conditions:
+            jql_parts.append(f"({' OR '.join(tool_conditions)})")
+
 
     if reporter:
         jql_parts.append(f'reporter = "{reporter}"')

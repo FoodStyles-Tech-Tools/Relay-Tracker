@@ -1,8 +1,8 @@
 [
   {
     "id": "TC001",
-    "title": "Google OAuth Login Success",
-    "description": "Verify that a user can successfully log in using Google OAuth with valid credentials and that the first user is assigned the Admin role automatically.",
+    "title": "Google OAuth 2.0 Authentication Success",
+    "description": "Verify that users can successfully authenticate with Google OAuth 2.0 and are assigned appropriate roles (User, SQA, Admin) accordingly.",
     "category": "functional",
     "priority": "High",
     "steps": [
@@ -12,34 +12,22 @@
       },
       {
         "type": "action",
-        "description": "Initiate Google OAuth login with a valid Google account."
+        "description": "Initiate Google OAuth 2.0 sign-in."
       },
       {
         "type": "assertion",
-        "description": "Check that the backend verifies the ID token successfully."
+        "description": "Confirm that the user is authenticated and redirected to the dashboard."
       },
       {
         "type": "assertion",
-        "description": "Verify the user account is created or retrieved in the Turso database."
-      },
-      {
-        "type": "assertion",
-        "description": "Confirm that if this is the first user, they are assigned the Admin role automatically."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify user is redirected to the dashboard page."
-      },
-      {
-        "type": "assertion",
-        "description": "Validate activity log for login is recorded."
+        "description": "Verify the user role is assigned and enforced based on their account (User, SQA, Admin)."
       }
     ]
   },
   {
     "id": "TC002",
-    "title": "Google OAuth Login Failure with Invalid Token",
-    "description": "Verify that login fails gracefully with invalid or expired Google ID token and appropriate error message is shown.",
+    "title": "Google OAuth 2.0 Authentication Failure",
+    "description": "Verify the system handles failed or unauthorized Google OAuth authentication attempts gracefully.",
     "category": "error handling",
     "priority": "High",
     "steps": [
@@ -49,516 +37,545 @@
       },
       {
         "type": "action",
-        "description": "Attempt login with a manipulated or expired Google ID token."
+        "description": "Attempt to sign in with invalid or denied Google OAuth credentials."
       },
       {
         "type": "assertion",
-        "description": "Check backend rejects token with 401 status."
+        "description": "Verify that appropriate error message is displayed."
       },
       {
         "type": "assertion",
-        "description": "Verify user remains on the login page."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify appropriate error notification is shown to the user."
+        "description": "Confirm that user remains on login page and no access is granted."
       }
     ]
   },
   {
     "id": "TC003",
-    "title": "Role-Based Access Control Enforcement",
-    "description": "Verify that actions are allowed or denied based on user roles for User, SQA, and Admin.",
-    "category": "security",
+    "title": "Dashboard Load and Display",
+    "description": "Verify dashboard loads correctly showing quick actions and recent issues statistics.",
+    "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Login as a User role account."
+        "description": "Log in as any role."
       },
       {
         "type": "action",
-        "description": "Attempt to edit issue status and priority."
+        "description": "Navigate to the dashboard page."
       },
       {
         "type": "assertion",
-        "description": "Verify that access is denied for status and priority editing and UI controls are not visible."
-      },
-      {
-        "type": "action",
-        "description": "Login as an SQA role account."
-      },
-      {
-        "type": "action",
-        "description": "Attempt to edit issue status and priority."
+        "description": "Confirm that quick actions (create issues) are visible."
       },
       {
         "type": "assertion",
-        "description": "Verify the edits are allowed and changes update correctly."
-      },
-      {
-        "type": "action",
-        "description": "Login as an Admin role account."
-      },
-      {
-        "type": "action",
-        "description": "Access user management UI and modify roles."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify that Admin can update user roles successfully."
+        "description": "Verify recent issue statistics are displayed accurately and updated."
       }
     ]
   },
   {
     "id": "TC004",
-    "title": "Issue List Filtering, Searching and Pagination",
-    "description": "Validate that issues can be filtered, searched, and paginated correctly on desktop and mobile layouts.",
+    "title": "Issue Creation with Valid Data",
+    "description": "Test creation of a new issue using the creation modal with valid data, attachments, and verify correct Jira SQA template submission.",
     "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to the Issues list page."
+        "description": "Navigate to issue creation modal from dashboard or quick action."
       },
       {
         "type": "action",
-        "description": "Apply filters for issue type, status, priority, and assignee."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify that the filtered results are displayed accordingly."
+        "description": "Fill in all required fields (status, priority, type, reporter, summary, description) with valid data."
       },
       {
         "type": "action",
-        "description": "Use search input with various keywords and verify debounce functionality reduces API requests."
-      },
-      {
-        "type": "assertion",
-        "description": "Confirm matching results update progressively."
+        "description": "Upload an attachment adhering to size and type constraints."
       },
       {
         "type": "action",
-        "description": "Navigate through different pages using pagination."
+        "description": "Submit the issue creation form."
       },
       {
         "type": "assertion",
-        "description": "Verify correct issues are shown for each page."
-      },
-      {
-        "type": "action",
-        "description": "Switch to mobile layout and repeat filters, search, and pagination."
+        "description": "Verify that the issue is created successfully and displayed in the issue list."
       },
       {
         "type": "assertion",
-        "description": "Check UI responsiveness and data correctness for mobile card view."
+        "description": "Confirm that the backend sends the correctly formatted Jira SQA template to Jira Cloud."
       },
       {
         "type": "assertion",
-        "description": "Verify URL query parameters update correctly with filter/search state and support sharing."
+        "description": "Check that success toast notification is shown."
       }
     ]
   },
   {
     "id": "TC005",
-    "title": "Issue Detail View Display and Inline Editing",
-    "description": "Verify detailed issue view displays markdown descriptions, comments with badges, and activity timeline with auto-refresh; inline editing respects user roles.",
-    "category": "functional",
+    "title": "Issue Creation Validation Errors",
+    "description": "Verify client-side validation errors and toast error notifications are triggered when submitting incomplete or invalid data in the issue creation modal.",
+    "category": "error handling",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Open an issue detail page."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify issue description is rendered with markdown formatting."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify comments list shows badges for 'via Relay' or 'via Jira'."
+        "description": "Open the issue creation modal."
       },
       {
         "type": "action",
-        "description": "Submit a new comment using Cmd+Enter."
+        "description": "Attempt to submit the form without filling required fields."
       },
       {
         "type": "assertion",
-        "description": "Verify the comment is posted and displayed."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify activity timeline shows issue history like status changes and assignments."
+        "description": "Confirm validation messages appear for missing mandatory fields."
       },
       {
         "type": "action",
-        "description": "Wait for 30 seconds with the tab visible."
+        "description": "Upload an invalid attachment (unsupported type or oversized)."
       },
       {
         "type": "assertion",
-        "description": "Verify the issue details auto-refresh with latest data."
-      },
-      {
-        "type": "action",
-        "description": "Login as SQA role and attempt to edit issue status and priority using dropdowns."
-      },
-      {
-        "type": "assertion",
-        "description": "Confirm changes are saved successfully."
-      },
-      {
-        "type": "action",
-        "description": "Login as User role and verify that status and priority dropdowns are not visible."
+        "description": "Verify upload is rejected and appropriate error message is displayed."
       }
     ]
   },
   {
     "id": "TC006",
-    "title": "Issue Creation Form Validation and Submission",
-    "description": "Verify the issue creation form performs real-time validation, supports rich text, file attachments, and submits data transformed according to Jira SQA template.",
+    "title": "Issues List Pagination and Filtering",
+    "description": "Verify that the issues list supports pagination, filtering by status, priority, type, reporter, and search functionality correctly updates displayed results.",
     "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Navigate to the create issue form."
+        "description": "Navigate to the issues list page."
       },
       {
         "type": "action",
-        "description": "Fill in the form fields with valid data including issue type, summary, description with rich text formatting, and upload one or more attachments."
+        "description": "Apply filters for status, priority, type, and reporter individually and in combination."
       },
       {
         "type": "assertion",
-        "description": "Check that real-time validation indicates no errors."
+        "description": "Confirm the list updates to show only matching issues."
       },
       {
         "type": "action",
-        "description": "Submit the form."
+        "description": "Use the search bar to query issues by keyword."
       },
       {
         "type": "assertion",
-        "description": "Verify issue is created successfully and visible in issue list."
+        "description": "Verify that the search results are relevant and displayed."
       },
       {
         "type": "action",
-        "description": "Verify data sent to backend is transformed into Jira SQA template format."
+        "description": "Navigate across pages using pagination controls."
       },
       {
         "type": "assertion",
-        "description": "Confirm attachments are uploaded and linked in the created issue."
-      },
-      {
-        "type": "action",
-        "description": "Try submitting form with missing mandatory fields."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify validation errors are shown and submission is blocked."
-      },
-      {
-        "type": "action",
-        "description": "Use large file attachments exceeding limits."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify upload is rejected with meaningful error."
+        "description": "Confirm correct pagination behavior and UI updates."
       }
     ]
   },
   {
     "id": "TC007",
-    "title": "Notification System Email and Discord",
-    "description": "Verify notifications for issue events are sent via email and Discord respecting user preferences.",
+    "title": "Detailed Issue View Permissions and Editing",
+    "description": "Verify the detailed issue view loads all information correctly and editing capabilities respect user roles and ownership rules.",
     "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Login and update notification preferences to enable email notifications and Discord notifications separately."
-      },
-      {
-        "type": "action",
-        "description": "Trigger issue events like creation, status change, and comment addition."
+        "description": "Open a detailed issue view as a User role where user is the reporter."
       },
       {
         "type": "assertion",
-        "description": "Verify user receives email notifications according to preferences."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify Discord webhook notifications are sent correctly if enabled."
+        "description": "Confirm issue details, comments, attachments, and activity timeline are displayed."
       },
       {
         "type": "action",
-        "description": "Turn off email and Discord notifications."
-      },
-      {
-        "type": "action",
-        "description": "Trigger new issue events."
+        "description": "Attempt inline editing of permitted fields."
       },
       {
         "type": "assertion",
-        "description": "Confirm no notifications are sent when preferences are disabled."
+        "description": "Verify that editing is allowed only on own tickets."
+      },
+      {
+        "type": "action",
+        "description": "Repeat above steps as SQA and Admin roles."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm SQA and Admin can edit and delete according to permissions."
+      },
+      {
+        "type": "action",
+        "description": "Add a comment and upload attachments."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify comments and attachments are saved and displayed correctly."
       }
     ]
   },
   {
     "id": "TC008",
-    "title": "Dashboard Display and Accuracy",
-    "description": "Validate that the dashboard shows live metrics, charts, recent activities, and personalized stats accurately after login.",
-    "category": "functional",
-    "priority": "Medium",
+    "title": "Backend Jira Cloud Integration Error Handling",
+    "description": "Test that backend integration with Jira Cloud handles API errors and retry logic correctly during issue creation, updates, and attachment management.",
+    "category": "error handling",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Login to the system."
+        "description": "Simulate Jira Cloud REST API downtime or errors during issue creation."
       },
       {
         "type": "assertion",
-        "description": "Verify dashboard displays user welcome message."
+        "description": "Verify backend retries requests as per retry policy."
       },
       {
         "type": "assertion",
-        "description": "Verify key metrics such as open bugs, tasks, and system health status are displayed."
-      },
-      {
-        "type": "assertion",
-        "description": "Check charts and recent activity feed display correct and updated information."
+        "description": "Check appropriate error responses propagate to frontend with user notifications."
       },
       {
         "type": "action",
-        "description": "Perform issue modifications to trigger dashboard data changes."
+        "description": "Attempt updating an issue or uploading an attachment during API failure."
       },
       {
         "type": "assertion",
-        "description": "Verify dashboard refreshes and updates metrics accordingly."
+        "description": "Verify error is caught and handled gracefully with feedback."
       }
     ]
   },
   {
     "id": "TC009",
-    "title": "Polling Mechanism and Real-Time Updates",
-    "description": "Validate recurring polling every 60 seconds fetches updated data, displays visual indicators, and pauses when browser tab is inactive.",
+    "title": "Email Notification Delivery Respecting Preferences",
+    "description": "Verify that email notifications are sent via SendGrid on issue creation, status changes, and new comments according to individual user notification preferences.",
     "category": "functional",
-    "priority": "Medium",
+    "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Login and open issues list or issue detail page."
+        "description": "Create a new issue with multiple users configured with different email notification preferences."
       },
       {
         "type": "assertion",
-        "description": "Observe that polling requests occur approximately every 60 seconds."
+        "description": "Confirm email notifications are sent only to users who have opted in."
       },
       {
         "type": "action",
-        "description": "Make a change on the backend or via another client."
+        "description": "Update issue status and add a comment."
       },
       {
         "type": "assertion",
-        "description": "Verify visual indicators notify user of new data available."
-      },
-      {
-        "type": "action",
-        "description": "Switch browser tab to inactive (background)."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify polling pauses when tab is inactive."
-      },
-      {
-        "type": "action",
-        "description": "Return to active tab."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify polling resumes and updates data."
-      },
-      {
-        "type": "action",
-        "description": "Simulate polling failure."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify error handling displays appropriate messages or retries."
+        "description": "Verify subsequent email notifications respect user preferences."
       }
     ]
   },
   {
     "id": "TC010",
-    "title": "User Preferences for Theme and Notifications Persistency",
-    "description": "Validate that user preferences such as theme (light/dark/system) and notification toggles are saved, loaded from backend, and applied correctly.",
+    "title": "Discord Notification Posting with Correct Formatting",
+    "description": "Verify that Discord notifications post formatted messages to dedicated channels for bugs, tasks, and stories reflecting issue events.",
     "category": "functional",
     "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Login and open user preferences settings."
-      },
-      {
-        "type": "action",
-        "description": "Change theme preference to dark mode."
+        "description": "Create, update, and comment on issues of various types (bug, task, story)."
       },
       {
         "type": "assertion",
-        "description": "Verify UI theme updates accordingly."
-      },
-      {
-        "type": "action",
-        "description": "Change notification toggles for email and Discord."
+        "description": "Confirm that Discord notifications are posted to correct channels."
       },
       {
         "type": "assertion",
-        "description": "Verify preferences are sent and saved to the backend."
-      },
-      {
-        "type": "action",
-        "description": "Logout and login again."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify preferences are loaded from backend and applied correctly on page load."
+        "description": "Verify message formatting is accurate and consistent with templates."
       }
     ]
   },
   {
     "id": "TC011",
-    "title": "SPA Navigation Without React Router",
-    "description": "Verify that SPA navigation using native history API updates URL and content correctly without full page reloads.",
+    "title": "Polling System Update and UI Indicator",
+    "description": "Verify that issue data is refreshed every 60 seconds via polling with UI indicators shown and proper error handling for failed polls.",
     "category": "functional",
-    "priority": "Low",
+    "priority": "Medium",
     "steps": [
       {
         "type": "action",
-        "description": "Login and navigate through different pages using the navigation bar."
+        "description": "Load the issue list or detail view."
       },
       {
         "type": "assertion",
-        "description": "Verify content updates without full page reload."
+        "description": "Observe that data updates at 60 second intervals."
       },
       {
         "type": "assertion",
-        "description": "Check the browser URL reflects current page with correct pathname."
+        "description": "Confirm UI indicators signal polling status."
       },
       {
         "type": "action",
-        "description": "Use browser back and forward buttons."
+        "description": "Simulate network failure during polling."
       },
       {
         "type": "assertion",
-        "description": "Verify popstate events update content accordingly."
+        "description": "Verify error is handled gracefully and user is notified."
       }
     ]
   },
   {
     "id": "TC012",
-    "title": "Error Boundary Handling",
-    "description": "Verify React error boundaries catch exceptions and display fallback UI instead of crashing the app.",
-    "category": "error handling",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Simulate an error in a child component by throwing an exception."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify error boundary catches the error."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify fallback UI is rendered with a meaningful message."
-      },
-      {
-        "type": "action",
-        "description": "Trigger async loading state in a component."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify loading component displays appropriately."
-      }
-    ]
-  },
-  {
-    "id": "TC013",
-    "title": "Logout Functionality and Activity Logging",
-    "description": "Verify users can log out securely and that the logout event is logged in the activity log.",
+    "title": "Bulk Status Updates Authorization and Functionality",
+    "description": "Verify bulk status update feature is accessible only to SQA and Admin roles and status changes apply correctly with UI update.",
     "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Login successfully."
+        "description": "Log in as User role and navigate to issues list."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that bulk status update option is not available."
       },
       {
         "type": "action",
-        "description": "Click sign out button in the navigation bar."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify user is redirected to login page."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify session is cleared and no protected pages are accessible."
+        "description": "Log in as SQA or Admin role."
       },
       {
         "type": "action",
-        "description": "Check backend activity log."
+        "description": "Select multiple issues and perform bulk status update."
       },
       {
         "type": "assertion",
-        "description": "Verify logout event is recorded with timestamp and user details."
+        "description": "Verify status updates apply immediately and are reflected in UI."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm success toast notification is shown."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "User Profile Preferences Update",
+    "description": "Verify that users can update notification preferences for email and Discord as well as theme settings, and changes persist correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to user profile page."
+      },
+      {
+        "type": "action",
+        "description": "Update email and Discord notification preferences."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm changes save successfully with confirmation toast."
+      },
+      {
+        "type": "action",
+        "description": "Toggle theme preference between dark and light modes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI reflects theme changes immediately and system preference detection works."
+      },
+      {
+        "type": "action",
+        "description": "Reload application."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm that preferences persist after reload."
       }
     ]
   },
   {
     "id": "TC014",
-    "title": "Backend Environment Variables and Service Initialization",
-    "description": "Verify that all required environment variables are loaded correctly and services initialize properly at backend startup.",
-    "category": "error handling",
+    "title": "Admin Role and User Management",
+    "description": "Verify that Admin users can manage user roles and system settings via Admin dashboard and changes enforce access rights.",
+    "category": "functional",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Start backend server with all environment variables set correctly."
-      },
-      {
-        "type": "assertion",
-        "description": "Verify server starts successfully without errors."
+        "description": "Log in as Admin."
       },
       {
         "type": "action",
-        "description": "Start backend server with one or more environment variables missing or misconfigured."
+        "description": "Access the Admin settings page."
+      },
+      {
+        "type": "action",
+        "description": "Modify roles of users and update system configurations."
       },
       {
         "type": "assertion",
-        "description": "Verify startup fails gracefully with logged error messages."
+        "description": "Confirm changes are saved successfully with feedback."
+      },
+      {
+        "type": "action",
+        "description": "Verify that updated roles affect user permissions upon next login."
       }
     ]
   },
   {
     "id": "TC015",
-    "title": "Performance Under Load With 80 Daily Users",
-    "description": "Verify system performance and stability under load simulating 80 concurrent daily users with real-time syncing and polling.",
-    "category": "performance",
+    "title": "Toast Notification Display and Error Handling",
+    "description": "Verify that toast notifications for success, error, and information messages appear appropriately in response to user actions and errors.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform various actions including successful issue creation and submission errors."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm toast notifications appear with correct messages and styles."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Protected Routes and Navigation",
+    "description": "Verify client-side routing protects routes that require authentication and appropriate error boundaries handle unexpected failures.",
+    "category": "security",
     "priority": "High",
     "steps": [
       {
         "type": "action",
-        "description": "Simulate 80 concurrent users performing login, issue creation, editing, and polling actions."
+        "description": "Attempt to access protected routes while logged out."
       },
       {
         "type": "assertion",
-        "description": "Verify no significant degradation in response times."
+        "description": "Confirm redirection to login page."
+      },
+      {
+        "type": "action",
+        "description": "Access various authenticated routes after login."
       },
       {
         "type": "assertion",
-        "description": "Validate real-time syncing remains accurate and timely."
+        "description": "Verify navigation works correctly and unauthorized role prevented from accessing admin pages."
+      },
+      {
+        "type": "action",
+        "description": "Force a runtime error in a component."
       },
       {
         "type": "assertion",
-        "description": "Verify no crashes, errors, or data inconsistencies occur."
+        "description": "Confirm error boundary displays fallback UI and user notification is shown."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Dark/Light Theme Switching and System Preference Detection",
+    "description": "Verify application theme changes based on user preference and system-level theme settings with ability for user override.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Set system theme preference to dark mode."
+      },
+      {
+        "type": "action",
+        "description": "Load the application and verify initial theme matches system preference."
+      },
+      {
+        "type": "action",
+        "description": "Change theme manually in user profile."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm manual theme setting overrides system preference immediately."
+      },
+      {
+        "type": "action",
+        "description": "Reload application."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm user theme preference is persisted and applied."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Attachment Upload Constraints and Error Feedback",
+    "description": "Verify attachment uploads enforce size and type constraints and provide clear error feedback when validation fails.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to upload a multipart attachment within allowed constraints."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm upload succeeds and attachment is shown."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to upload a file exceeding allowed size or unsupported file type."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify upload is rejected and user receives clear error notification."
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Database Role and Preferences Persistence",
+    "description": "Verify LibSQL database correctly manages and persists user roles, settings, notification preferences, and activity logs.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform updates to user roles, notification preferences, and theme settings."
+      },
+      {
+        "type": "action",
+        "description": "Trigger activity log entries by performing relevant actions."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm database state reflects all changes and logs persist."
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Deployment and Environment Configuration",
+    "description": "Verify successful deployment on Vercel with configured environment variables and secure external API integrations (Google OAuth, Jira API, SendGrid).",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Deploy application to Vercel environment."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm environment variables are securely configured."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Google OAuth login works in deployed environment."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm Jira Cloud integration functions with correct API keys."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify SendGrid email notifications send correctly."
       }
     ]
   }

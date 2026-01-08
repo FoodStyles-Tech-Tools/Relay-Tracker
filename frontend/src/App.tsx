@@ -3,7 +3,6 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import {
   MainLayout,
   ErrorBoundary,
-  LoadingPage,
   ProtectedRoute,
   ToastContainer,
   useToasts,
@@ -11,20 +10,13 @@ import {
 } from "./components";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./hooks/useAuth";
-import { checkHealth } from "./lib/api";
 import { IssuesPage } from "./pages/Issues";
 import { IssueDetailPage } from "./pages/IssueDetail";
 import { ProfilePage } from "./pages/Profile";
 import { AdminSettingsPage } from "./pages/AdminSettings";
-import { CreateIssueModal } from "./components/issues";
-import {
-  Radio,
-  CheckCircle,
-  XCircle,
-  Bug,
-  ListTodo,
-  BookOpen,
-} from "lucide-react";
+import { CreateIssueModal, DashboardIssueList } from "./components/issues";
+import { Radio, Bug, ListTodo, BookOpen, XCircle } from "lucide-react";
+import { checkHealth } from "./lib/api";
 
 const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
 
@@ -56,14 +48,40 @@ function useRoute() {
 
 function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { user } = useAuth();
-  const [healthStatus, setHealthStatus] = useState<"loading" | "ok" | "error">(
-    "loading"
-  );
-  const [errorMessage, setErrorMessage] = useState<string>("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [initialIssueType, setInitialIssueType] = useState<
+    "Bug" | "Task" | "Story" | undefined
+  >(undefined);
+  const [healthStatus, setHealthStatus] = useState<"healthy" | "unhealthy" | "loading">("loading");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Check backend health on mount
+  useEffect(() => {
+    async function checkBackendHealth() {
+      try {
+        await checkHealth();
+        setHealthStatus("healthy");
+        setErrorMessage(null);
+      } catch (err) {
+        setHealthStatus("unhealthy");
+        setErrorMessage(err instanceof Error ? err.message : "Backend unavailable");
+      }
+    }
+    checkBackendHealth();
+  }, []);
+
+  const handleOpenCreateModal = (type?: "Bug" | "Task" | "Story") => {
+    setInitialIssueType(type);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setInitialIssueType(undefined);
+  };
 
   const handleIssueCreated = (issueKey: string) => {
-    setIsCreateModalOpen(false);
+    handleCloseCreateModal();
     showToast({
       type: "success",
       title: `Issue ${issueKey} created!`,
@@ -73,32 +91,8 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
         onClick: () => onNavigate(`/issues/${issueKey}`),
       },
     });
-    // Navigate to the issue detail page after a brief delay
     setTimeout(() => onNavigate(`/issues/${issueKey}`), 1500);
   };
-
-  useEffect(() => {
-    const checkBackendHealth = async () => {
-      try {
-        const response = await checkHealth();
-        if (response.status === "ok") {
-          setHealthStatus("ok");
-        } else {
-          setHealthStatus("error");
-          setErrorMessage("Unexpected response from server");
-        }
-      } catch (error) {
-        setHealthStatus("error");
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Failed to connect to backend"
-        );
-      }
-    };
-
-    checkBackendHealth();
-  }, []);
 
   return (
     <MainLayout>
@@ -121,46 +115,10 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
           </p>
         </div>
 
-        {/* Status Card */}
-        <div className="w-full max-w-md mb-8">
-          <div className="glassmorphism dark:glassmorphism-dark rounded-2xl p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              System Status
-            </h2>
-
-            {healthStatus === "loading" && <LoadingPage />}
-
-            {healthStatus === "ok" && (
-              <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
-                <div>
-                  <p className="font-medium text-green-800 dark:text-green-200">
-                    Backend Connected
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {healthStatus === "error" && (
-              <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
-                <div>
-                  <p className="font-medium text-red-800 dark:text-red-200">
-                    Backend Unavailable
-                  </p>
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errorMessage || "Unable to connect to server"}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Quick Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full">
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => handleOpenCreateModal("Bug")}
             className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left"
           >
             <div className="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4 group-hover:bg-relay-gradient transition-colors">
@@ -175,7 +133,7 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
           </button>
 
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => handleOpenCreateModal("Task")}
             className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left"
           >
             <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4 group-hover:bg-relay-gradient transition-colors">
@@ -190,27 +148,65 @@ function Dashboard({ onNavigate }: { onNavigate: (path: string) => void }) {
           </button>
 
           <button
-            onClick={() => onNavigate("/issues")}
+            onClick={() => handleOpenCreateModal("Story")}
             className="group p-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-relay-orange dark:hover:border-relay-orange transition-colors text-left"
           >
             <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4 group-hover:bg-relay-gradient transition-colors">
               <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400 group-hover:text-white" />
             </div>
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-              View Issues
+              Create Story
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Browse all reported issues
+              Describe a new feature
             </p>
           </button>
         </div>
+
+        {/* Recent Issues Widget */}
+        <div className="mt-12 w-full max-w-3xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Recent Issues
+              </h2>
+              <button
+                onClick={() => onNavigate("/issues")}
+                className="text-sm text-relay-orange hover:underline"
+              >
+                View all
+              </button>
+            </div>
+            <DashboardIssueList onIssueClick={(key) => onNavigate(`/issues/${key}`)} />
+          </div>
+        </div>
+
+        {/* Conditional System Status - only show if unhealthy */}
+        {healthStatus === "unhealthy" && (
+          <div className="mt-6 w-full max-w-3xl">
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 p-4">
+              <div className="flex items-center gap-3">
+                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                <div>
+                  <h3 className="font-medium text-red-800 dark:text-red-300">
+                    System Status: Degraded
+                  </h3>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {errorMessage || "Some features may be unavailable"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Issue Modal */}
       <CreateIssueModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
         onSuccess={handleIssueCreated}
+        initialType={initialIssueType}
       />
     </MainLayout>
   );

@@ -1,10 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
-import { MainLayout, showToast } from '../components';
-import { IssueList, FilterBar, SearchBar, Pagination, CreateIssueModal, BulkActionBar } from '../components/issues';
-import { fetchIssues, bulkUpdateIssueStatus, type IssuesResponse } from '../lib/api';
-import { useAuth } from '../hooks/useAuth';
-import type { Issue, IssueType, IssuePriority, IssueStatus } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { Plus, RefreshCw } from "lucide-react";
+import { MainLayout, showToast } from "../components";
+import {
+  IssueList,
+  FilterBar,
+  SearchBar,
+  Pagination,
+  CreateIssueModal,
+  BulkActionBar,
+} from "../components/issues";
+import {
+  fetchIssues,
+  bulkUpdateIssueStatus,
+  type IssuesResponse,
+} from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
+import type {
+  Issue,
+  IssueType,
+  IssuePriority,
+  IssueStatus,
+  Tool,
+} from "../types";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -13,17 +30,22 @@ function parseUrlFilters(): {
   statuses: IssueStatus[];
   priorities: IssuePriority[];
   types: IssueType[];
+  tools: Tool[];
   search: string;
   page: number;
 } {
   const params = new URLSearchParams(window.location.search);
 
   return {
-    statuses: (params.get('status')?.split(',').filter(Boolean) || []) as IssueStatus[],
-    priorities: (params.get('priority')?.split(',').filter(Boolean) || []) as IssuePriority[],
-    types: (params.get('type')?.split(',').filter(Boolean) || []) as IssueType[],
-    search: params.get('search') || '',
-    page: parseInt(params.get('page') || '1', 10),
+    statuses: (params.get("status")?.split(",").filter(Boolean) ||
+      []) as IssueStatus[],
+    priorities: (params.get("priority")?.split(",").filter(Boolean) ||
+      []) as IssuePriority[],
+    types: (params.get("type")?.split(",").filter(Boolean) ||
+      []) as IssueType[],
+    tools: (params.get("tool")?.split(",").filter(Boolean) || []) as Tool[],
+    search: params.get("search") || "",
+    page: parseInt(params.get("page") || "1", 10),
   };
 }
 
@@ -32,22 +54,26 @@ function updateUrlFilters(filters: {
   statuses: IssueStatus[];
   priorities: IssuePriority[];
   types: IssueType[];
+  tools: Tool[];
   search: string;
   page: number;
 }) {
   const params = new URLSearchParams();
 
-  if (filters.statuses.length > 0) params.set('status', filters.statuses.join(','));
-  if (filters.priorities.length > 0) params.set('priority', filters.priorities.join(','));
-  if (filters.types.length > 0) params.set('type', filters.types.join(','));
-  if (filters.search) params.set('search', filters.search);
-  if (filters.page > 1) params.set('page', filters.page.toString());
+  if (filters.statuses.length > 0)
+    params.set("status", filters.statuses.join(","));
+  if (filters.priorities.length > 0)
+    params.set("priority", filters.priorities.join(","));
+  if (filters.types.length > 0) params.set("type", filters.types.join(","));
+  if (filters.tools.length > 0) params.set("tool", filters.tools.join(","));
+  if (filters.search) params.set("search", filters.search);
+  if (filters.page > 1) params.set("page", filters.page.toString());
 
   const newUrl = params.toString()
     ? `${window.location.pathname}?${params.toString()}`
     : window.location.pathname;
 
-  window.history.replaceState({}, '', newUrl);
+  window.history.replaceState({}, "", newUrl);
 }
 
 export function IssuesPage() {
@@ -56,7 +82,7 @@ export function IssuesPage() {
   const { hasRole } = useAuth();
 
   // Only SQA and Admin can bulk edit
-  const canBulkEdit = hasRole(['sqa', 'admin']);
+  const canBulkEdit = hasRole(["sqa", "admin"]);
 
   const [issues, setIssues] = useState<Issue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,12 +91,23 @@ export function IssuesPage() {
   const [totalPages, setTotalPages] = useState(0);
 
   // Bulk selection state
-  const [selectedIssueKeys, setSelectedIssueKeys] = useState<Set<string>>(new Set());
+  const [selectedIssueKeys, setSelectedIssueKeys] = useState<Set<string>>(
+    new Set()
+  );
 
   // Filter state
-  const [selectedStatuses, setSelectedStatuses] = useState<IssueStatus[]>(initialFilters.statuses);
-  const [selectedPriorities, setSelectedPriorities] = useState<IssuePriority[]>(initialFilters.priorities);
-  const [selectedTypes, setSelectedTypes] = useState<IssueType[]>(initialFilters.types);
+  const [selectedStatuses, setSelectedStatuses] = useState<IssueStatus[]>(
+    initialFilters.statuses
+  );
+  const [selectedPriorities, setSelectedPriorities] = useState<IssuePriority[]>(
+    initialFilters.priorities
+  );
+  const [selectedTypes, setSelectedTypes] = useState<IssueType[]>(
+    initialFilters.types
+  );
+  const [selectedTools, setSelectedTools] = useState<Tool[]>(
+    initialFilters.tools
+  );
   const [searchQuery, setSearchQuery] = useState(initialFilters.search);
   const [currentPage, setCurrentPage] = useState(initialFilters.page);
 
@@ -85,8 +122,10 @@ export function IssuesPage() {
     try {
       const response: IssuesResponse = await fetchIssues({
         status: selectedStatuses.length > 0 ? selectedStatuses : undefined,
-        priority: selectedPriorities.length > 0 ? selectedPriorities : undefined,
+        priority:
+          selectedPriorities.length > 0 ? selectedPriorities : undefined,
         type: selectedTypes.length > 0 ? selectedTypes : undefined,
+        tool: selectedTools.length > 0 ? selectedTools : undefined,
         search: searchQuery || undefined,
         page: currentPage,
         limit: ITEMS_PER_PAGE,
@@ -97,12 +136,19 @@ export function IssuesPage() {
       setTotalPages(response.totalPages);
       setLastUpdated(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load issues');
+      setError(err instanceof Error ? err.message : "Failed to load issues");
       setIssues([]);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedStatuses, selectedPriorities, selectedTypes, searchQuery, currentPage]);
+  }, [
+    selectedStatuses,
+    selectedPriorities,
+    selectedTypes,
+    selectedTools,
+    searchQuery,
+    currentPage,
+  ]);
 
   // Load issues on mount and when filters change
   useEffect(() => {
@@ -115,10 +161,18 @@ export function IssuesPage() {
       statuses: selectedStatuses,
       priorities: selectedPriorities,
       types: selectedTypes,
+      tools: selectedTools,
       search: searchQuery,
       page: currentPage,
     });
-  }, [selectedStatuses, selectedPriorities, selectedTypes, searchQuery, currentPage]);
+  }, [
+    selectedStatuses,
+    selectedPriorities,
+    selectedTypes,
+    selectedTools,
+    searchQuery,
+    currentPage,
+  ]);
 
   // Reset to page 1 when filters change (but not when page changes)
   const handleStatusChange = useCallback((statuses: IssueStatus[]) => {
@@ -136,6 +190,11 @@ export function IssuesPage() {
     setCurrentPage(1);
   }, []);
 
+  const handleToolChange = useCallback((tools: Tool[]) => {
+    setSelectedTools(tools);
+    setCurrentPage(1);
+  }, []);
+
   const handleSearchChange = useCallback((search: string) => {
     setSearchQuery(search);
     setCurrentPage(1);
@@ -145,14 +204,15 @@ export function IssuesPage() {
     setSelectedStatuses([]);
     setSelectedPriorities([]);
     setSelectedTypes([]);
-    setSearchQuery('');
+    setSelectedTools([]);
+    setSearchQuery("");
     setCurrentPage(1);
   }, []);
 
   const handleIssueClick = useCallback((key: string) => {
     // Navigate to issue detail page
-    window.history.pushState({}, '', `/issues/${key}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    window.history.pushState({}, "", `/issues/${key}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -172,23 +232,26 @@ export function IssuesPage() {
     });
   }, []);
 
-  const handleSelectAll = useCallback((keys: string[]) => {
-    if (keys.length === 0) {
-      // Clear selection for visible issues
-      setSelectedIssueKeys((prev) => {
-        const next = new Set(prev);
-        issues.forEach((issue) => next.delete(issue.key));
-        return next;
-      });
-    } else {
-      // Add all visible issues to selection
-      setSelectedIssueKeys((prev) => {
-        const next = new Set(prev);
-        keys.forEach((key) => next.add(key));
-        return next;
-      });
-    }
-  }, [issues]);
+  const handleSelectAll = useCallback(
+    (keys: string[]) => {
+      if (keys.length === 0) {
+        // Clear selection for visible issues
+        setSelectedIssueKeys((prev) => {
+          const next = new Set(prev);
+          issues.forEach((issue) => next.delete(issue.key));
+          return next;
+        });
+      } else {
+        // Add all visible issues to selection
+        setSelectedIssueKeys((prev) => {
+          const next = new Set(prev);
+          keys.forEach((key) => next.add(key));
+          return next;
+        });
+      }
+    },
+    [issues]
+  );
 
   // Bulk action state
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
@@ -197,58 +260,68 @@ export function IssuesPage() {
     setSelectedIssueKeys(new Set());
   }, []);
 
-  const handleBulkStatusUpdate = useCallback(async (status: IssueStatus) => {
-    if (selectedIssueKeys.size === 0) return;
+  const handleBulkStatusUpdate = useCallback(
+    async (status: IssueStatus) => {
+      if (selectedIssueKeys.size === 0) return;
 
-    setIsBulkUpdating(true);
-    try {
-      const result = await bulkUpdateIssueStatus(Array.from(selectedIssueKeys), status);
+      setIsBulkUpdating(true);
+      try {
+        const result = await bulkUpdateIssueStatus(
+          Array.from(selectedIssueKeys),
+          status
+        );
 
-      if (result.failed.length > 0) {
+        if (result.failed.length > 0) {
+          showToast({
+            type: "warning",
+            title: "Partial update",
+            message: `${result.updated} updated, ${result.failed.length} failed`,
+          });
+        } else {
+          showToast({
+            type: "success",
+            title: "Bulk update complete",
+            message: `${result.updated} issue(s) updated to "${status}"`,
+          });
+        }
+
+        setSelectedIssueKeys(new Set());
+        loadIssues();
+      } catch (err) {
         showToast({
-          type: 'warning',
-          title: 'Partial update',
-          message: `${result.updated} updated, ${result.failed.length} failed`,
+          type: "error",
+          title: "Bulk update failed",
+          message:
+            err instanceof Error ? err.message : "Failed to update issues",
         });
-      } else {
-        showToast({
-          type: 'success',
-          title: 'Bulk update complete',
-          message: `${result.updated} issue(s) updated to "${status}"`,
-        });
+      } finally {
+        setIsBulkUpdating(false);
       }
-
-      setSelectedIssueKeys(new Set());
-      loadIssues();
-    } catch (err) {
-      showToast({
-        type: 'error',
-        title: 'Bulk update failed',
-        message: err instanceof Error ? err.message : 'Failed to update issues',
-      });
-    } finally {
-      setIsBulkUpdating(false);
-    }
-  }, [selectedIssueKeys, loadIssues]);
+    },
+    [selectedIssueKeys, loadIssues]
+  );
 
   // Create Issue Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const handleIssueCreated = useCallback((issueKey: string) => {
-    setIsCreateModalOpen(false);
-    showToast({
-      type: 'success',
-      title: `Issue ${issueKey} created!`,
-      message: 'Your issue has been submitted successfully.',
-      action: {
-        label: 'View Issue',
-        onClick: () => handleIssueClick(issueKey),
-      },
-    });
-    // Refresh the list and navigate to the new issue
-    loadIssues();
-    setTimeout(() => handleIssueClick(issueKey), 1500);
-  }, [handleIssueClick, loadIssues]);
+  const handleIssueCreated = useCallback(
+    (issueKey: string) => {
+      setIsCreateModalOpen(false);
+      showToast({
+        type: "success",
+        title: `Issue ${issueKey} created!`,
+        message: "Your issue has been submitted successfully.",
+        action: {
+          label: "View Issue",
+          onClick: () => handleIssueClick(issueKey),
+        },
+      });
+      // Refresh the list and navigate to the new issue
+      loadIssues();
+      setTimeout(() => handleIssueClick(issueKey), 1500);
+    },
+    [handleIssueClick, loadIssues]
+  );
 
   return (
     <MainLayout>
@@ -256,9 +329,11 @@ export function IssuesPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Issues</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Issues
+            </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {totalItems} issue{totalItems !== 1 ? 's' : ''} total
+              {totalItems} issue{totalItems !== 1 ? "s" : ""} total
               {lastUpdated && (
                 <span className="ml-2">
                   • Updated {lastUpdated.toLocaleTimeString()}
@@ -274,7 +349,9 @@ export function IssuesPage() {
               disabled={isLoading}
               className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+              />
               Refresh
             </button>
 
@@ -306,6 +383,8 @@ export function IssuesPage() {
             onStatusChange={handleStatusChange}
             onPriorityChange={handlePriorityChange}
             onTypeChange={handleTypeChange}
+            selectedTools={selectedTools}
+            onToolChange={handleToolChange}
             onClearAll={handleClearAll}
           />
         </div>
@@ -332,7 +411,13 @@ export function IssuesPage() {
           selectedKeys={selectedIssueKeys}
           onToggle={handleToggleSelect}
           onSelectAll={handleSelectAll}
-          hasFilters={selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedTypes.length > 0 || !!searchQuery}
+          hasFilters={
+            selectedStatuses.length > 0 ||
+            selectedPriorities.length > 0 ||
+            selectedTypes.length > 0 ||
+            selectedTools.length > 0 ||
+            !!searchQuery
+          }
           onClearFilters={handleClearAll}
           onCreateIssue={() => setIsCreateModalOpen(true)}
         />

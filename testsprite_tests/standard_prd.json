@@ -1,264 +1,222 @@
 {
   "meta": {
-    "project": "Relay Bug and Task Tracker",
+    "project": "Relay",
     "date": "2025-12-30",
     "prepared_by": "Software Development Manager"
   },
-  "product_overview": "Relay is a custom-built web application designed to replace Jira Service Management for bug and task tracking with a modern, customizable UI that syncs bidirectionally with Jira Cloud in real-time. It offers role-based access control, direct Google OAuth authentication, comprehensive issue management, notifications, and an intuitive dashboard, all hosted on a zero-cost infrastructure.",
+  "product_overview": "Relay is a custom bug and task tracking web application designed to replace Jira Service Management for internal users. It features a modern, customizable UI that integrates seamlessly with Jira Cloud, supporting real-time data sync, comprehensive issue management, and notification systems tailored to user preferences.",
   "core_goals": [
-    "Replace existing Jira Service Management tool with a more customizable, feature-rich app.",
-    "Enable seamless bidirectional syncing with Jira Cloud to keep all data consistent.",
-    "Provide role-based access control for Users, SQA, and Admin with specific permissions.",
-    "Implement secure Google OAuth SSO with first-user auto admin assignment.",
-    "Create a modern, responsive UI with issue reporting, filtering, and detailed views.",
-    "Implement notifications via email and Discord respecting user preferences.",
-    "Ensure real-time-ish updates through efficient polling.",
-    "Enable activity logging for audit trails.",
-    "Deliver zero-cost hosting with scalable serverless architecture."
+    "Replace the simplistic Jira Service Management with a customizable, modern UI suited for daily bug/task reporting.",
+    "Provide seamless bidirectional synchronization with Jira Cloud, ensuring all data remains authoritative and updated.",
+    "Implement role-based access control with distinct permissions for Users, SQA, and Admin roles.",
+    "Enable efficient issue creation, tracking, and management with rich filtering, searching, and visual status indicators.",
+    "Deliver robust notification systems (email and Discord) respecting user preferences to improve communication and awareness.",
+    "Offer responsive design supporting desktop and mobile with dark/light theme support.",
+    "Deploy a scalable, zero-cost infrastructure using free tier services and serverless technology."
   ],
   "key_features": [
-    "Direct Google OAuth authentication with backend token verification and automatic first-user admin assignment.",
-    "Role-based access control with User, SQA, and Admin roles dictating permissions.",
-    "Integration with Jira Cloud REST API v3 for issue creation, update, comment, attachment, and deletion support.",
-    "Filterable, searchable, and paginated issue list view with desktop and mobile responsive layouts.",
-    "Detailed issue view with inline editing, comments, and activity timeline with auto refresh.",
-    "Create issue form with rich text editor, type selection, file attachments, and real-time validation.",
-    "Notification system integrating SendGrid email and Discord webhooks with user preference controls.",
-    "Dashboard showing key metrics, charts, recent activity, and personalized stats.",
-    "User preferences management including theme (dark/light/system) and notification toggles stored in Turso database.",
-    "Activity logging capturing logins, logouts, changes, and user actions for an audit trail.",
-    "Poll-based real-time updating with visual indicators and error handling.",
-    "SPA navigation without react-router using native history API.",
-    "Error boundaries and loading states for robust UX."
+    "Google OAuth 2.0 Authentication with role-based access control (User, SQA, Admin).",
+    "Dashboard displaying quick actions and recent issues statistics.",
+    "Issue creation modal with detailed forms, attachments upload, and validation.",
+    "Paginated issues list with advanced filters by status, priority, type, reporter, and search capabilities.",
+    "Detailed issue view including comments, attachments, activity timeline, and inline editing with permission checks.",
+    "Backend integration with Jira Cloud via REST API including issue creation, updates, and attachment management with error handling and retry logic.",
+    "Email notifications via SendGrid for issue creation, status changes, and commenting respecting user preferences.",
+    "Discord notifications to dedicated channels for bugs, tasks, and stories with formatted messages.",
+    "Bulk status updates enabled for SQA and Admin roles.",
+    "User profile management for notification preferences and theme settings.",
+    "Admin dashboard to manage users, roles, and system settings.",
+    "Toast notifications for user feedback and error handling throughout the app.",
+    "Dark/light theme support with system preference detection.",
+    "Client-side navigation with protected routes and error boundary handling.",
+    "LibSQL database management for user roles, preferences, and activity logging."
   ],
   "user_flow_summary": [
-    "User visits the login page and authenticates via Google SSO; first user becomes Admin automatically.",
-    "Upon login, user is taken to the dashboard displaying personalized stats, quick actions, and system health.",
-    "User navigates to Issues list, applies filters and search, and selects an issue to view details.",
-    "Depending on role, user can edit issue summary, status, priority, assignee, add comments, and upload attachments.",
-    "User can create new issues via a form with validation and file upload support, submitting data transformed to Jira SQA Template.",
-    "User preferences can be changed for theme and notifications, saved in backend.",
-    "Notifications for events (ticket created, status changed, comments added) are sent by email and Discord respecting preferences.",
-    "Recurring polling every 60 seconds updates issues and notifies user of changes with visual feedback.",
-    "Admin users manage user roles and permissions through a dedicated UI.",
-    "Users can logout securely, and the system logs all pertinent user activity."
+    "User signs in using Google OAuth and is assigned a default or existing role (User, SQA, Admin).",
+    "Landing on the dashboard, users can see an overview of stats and recent issues, with quick actions to create new issues.",
+    "Users initiate issue creation through a modal with defined steps, fill required fields, upload attachments, and submit; data is transformed to a Jira SQA template and sent to Jira Cloud via backend.",
+    "Users view a paginated and filterable list of issues with search and multi-faceted filtering. Clicking an issue navigates to detailed view.",
+    "In the issue detail view, users see all relevant info, can edit according to permissions, add comments, and view activity timeline.",
+    "Users receive real-time updates via polling every 60 seconds with UI indicators.",
+    "Bulk update actions for issues are available to SQA and Admin users.",
+    "Users can update their profile preferences for email/Discord notifications and themes.",
+    "Admins access a settings page to manage user roles and system configurations.",
+    "Notifications trigger email and Discord messages based on user preferences and issue events."
   ],
   "validation_criteria": [
-    "Successful OAuth login with token verification backend and role assignment.",
-    "Role-based access controls enforced; unauthorized actions rejected.",
-    "All data syncs with Jira Cloud; changes in Relay reflected in Jira and vice versa.",
-    "Issue filtering, searching, and pagination work accurately across devices.",
-    "Issue details display correctly with markdown descriptions, comments, and activity timeline.",
-    "Issue creation form validates inputs and uploads attachments properly.",
-    "Email and Discord notifications send correctly according to user preferences.",
-    "Dashboard accurately reflects live statistics and recent activity.",
-    "Polling mechanism updates data every 60 seconds and pauses when inactive tab.",
-    "No major UI errors; error boundaries gracefully handle exceptions.",
-    "All environment variables load correctly and services initialize at startup.",
-    "Performance remains stable with 80 daily users and real-time syncing.",
-    "Comprehensive unit and integration tests cover core functions."
+    "Successful Google OAuth login and role assignment for all user roles.",
+    "Issue creation results in correctly formatted Jira SQA template tickets in Jira Cloud.",
+    "User permissions enforced: Users can edit own tickets; SQA/Admin can edit/delete as per role.",
+    "Filtering, sorting, and paging of issues function correctly and update the UI responsively.",
+    "Attachments upload adheres to size and type constraints, with proper error feedback.",
+    "Email notifications are sent for issue creation, status changes, and comments respecting user preferences.",
+    "Discord notifications post in correct channels with accurate message formatting.",
+    "Polling system updates the UI with minimal latency and proper error handling.",
+    "Bulk status updates succeed only for authorized roles and reflect immediately.",
+    "User profile changes persist and affect notification delivery and theme settings.",
+    "Admin settings allow managing roles and users securely, with changes reflected in access rights.",
+    "UI components respond correctly to theme toggling and system preferences.",
+    "Error boundaries capture runtime errors gracefully with user notifications.",
+    "The system deploys successfully on Vercel with environment variables configured and secure external API integrations."
   ],
   "code_summary": {
     "tech_stack": [
       "TypeScript",
       "React 19",
-      "Vite",
+      "Vite 7",
       "Tailwind CSS 4",
-      "@react-oauth/google",
-      "Python",
-      "Flask",
-      "Turso",
-      "libsql",
-      "SQLite",
-      "google-auth"
+      "Google OAuth",
+      "Python 3.13",
+      "Flask 3.1",
+      "Jira API",
+      "LibSQL",
+      "SendGrid",
+      "Lucide Icons"
     ],
     "features": [
       {
-        "name": "Direct Google OAuth Authentication",
-        "description": "Google OAuth integration using @react-oauth/google library with ID token flow. Backend verifies tokens using google-auth library and creates/retrieves users from Turso database.",
+        "name": "Google OAuth Authentication",
+        "description": "User authentication using Google OAuth 2.0 with role-based access control (user, sqa, admin)",
         "files": [
-          "frontend/src/App.tsx",
-          "frontend/src/pages/Login.tsx",
           "frontend/src/context/AuthContext.tsx",
           "frontend/src/hooks/useAuth.ts",
+          "frontend/src/components/ProtectedRoute.tsx",
+          "backend/api/routes/auth.py",
           "backend/api/utils/auth.py"
         ]
       },
       {
-        "name": "Turso Database Integration",
-        "description": "SQLite database via Turso (libsql) with user_roles, user_preferences, and activity_log tables. Automatic first-user admin assignment implemented in database layer.",
+        "name": "Dashboard",
+        "description": "Landing page with quick actions to create bugs, tasks, stories and recent issues widget",
         "files": [
-          "backend/api/utils/database.py",
-          "backend/api/models/schema.sql"
+          "frontend/src/App.tsx",
+          "frontend/src/components/issues/DashboardIssueList.tsx"
         ]
       },
       {
-        "name": "First User Admin Assignment",
-        "description": "Automatic admin role assignment for the first user to register. Implemented in create_user function by counting existing users.",
+        "name": "Issue Creation Modal",
+        "description": "Modal dialog for creating new Jira issues with form validation and toast notifications",
         "files": [
-          "backend/api/utils/database.py"
+          "frontend/src/components/issues/CreateIssueModal.tsx",
+          "backend/api/routes/issues.py"
         ]
       },
       {
-        "name": "Google ID Token Verification",
-        "description": "Backend middleware that verifies Google ID tokens using google.oauth2.id_token. Validates tokens against Google OAuth Client ID and rejects invalid/expired tokens with 401.",
+        "name": "Issues List & Filtering",
+        "description": "Paginated issue list with filtering by status, priority, type, reporter, and search",
         "files": [
-          "backend/api/utils/auth.py"
+          "frontend/src/pages/Issues.tsx",
+          "frontend/src/components/issues/IssueList.tsx",
+          "frontend/src/components/issues/FilterBar.tsx",
+          "frontend/src/components/issues/SearchBar.tsx",
+          "frontend/src/components/issues/Pagination.tsx",
+          "backend/api/routes/issues.py",
+          "backend/api/services/jira_service.py"
         ]
       },
       {
-        "name": "Role-Based Access Control",
-        "description": "Role-based authorization with require_role decorator supporting user, sqa, and admin roles from Turso database.",
+        "name": "Issue Detail View",
+        "description": "Detailed view of individual issues with comments, attachments, activity timeline, and status updates",
         "files": [
-          "backend/api/utils/auth.py",
+          "frontend/src/pages/IssueDetail.tsx",
+          "frontend/src/components/issues/CommentList.tsx",
+          "frontend/src/components/issues/CommentForm.tsx",
+          "frontend/src/components/issues/ActivityTimeline.tsx",
+          "frontend/src/components/issues/StatusDropdown.tsx",
+          "frontend/src/components/issues/PriorityDropdown.tsx",
+          "backend/api/routes/issues.py"
+        ]
+      },
+      {
+        "name": "Jira Integration",
+        "description": "Backend service for interacting with Jira API to create, update, fetch issues and manage attachments",
+        "files": [
+          "backend/api/services/jira_service.py",
+          "backend/api/utils/template_builder.py"
+        ]
+      },
+      {
+        "name": "Email Notifications",
+        "description": "SendGrid-based email notifications for issue creation, status changes, and new comments",
+        "files": [
+          "backend/api/services/email_service.py"
+        ]
+      },
+      {
+        "name": "Bulk Status Updates",
+        "description": "Bulk update status for multiple issues (SQA and Admin only)",
+        "files": [
+          "frontend/src/components/issues/BulkActionBar.tsx",
+          "backend/api/routes/issues.py"
+        ]
+      },
+      {
+        "name": "User Profile & Preferences",
+        "description": "User profile page with notification preferences and theme settings",
+        "files": [
+          "frontend/src/pages/Profile.tsx",
           "backend/api/routes/auth.py"
         ]
       },
       {
-        "name": "Protected Routes",
-        "description": "Frontend route protection that redirects unauthenticated users to login page.",
+        "name": "Admin Settings",
+        "description": "Admin page for managing user roles and system settings",
         "files": [
-          "frontend/src/components/ProtectedRoute.tsx"
-        ]
-      },
-      {
-        "name": "User Preferences Management",
-        "description": "User preferences stored in Turso including theme (light/dark/system), email notifications, and discord notifications with API endpoints for updates.",
-        "files": [
-          "frontend/src/context/AuthContext.tsx",
+          "frontend/src/pages/AdminSettings.tsx",
           "backend/api/routes/auth.py",
           "backend/api/utils/database.py"
         ]
       },
       {
-        "name": "Theme System",
-        "description": "Dark mode and light mode theme support with system preference detection stored in Turso user_preferences.",
+        "name": "Toast Notifications",
+        "description": "User feedback system with toast notifications for success, error, and info messages",
         "files": [
-          "frontend/src/hooks/useTheme.ts",
-          "frontend/src/index.css"
+          "frontend/src/components/Toast.tsx",
+          "frontend/src/lib/toast.ts"
         ]
       },
       {
-        "name": "Dashboard",
-        "description": "Main dashboard with backend health monitoring, user welcome message, and quick action buttons for bugs and tasks.",
+        "name": "Theme Management",
+        "description": "Dark/light theme support with system preference detection",
         "files": [
-          "frontend/src/App.tsx"
+          "frontend/src/hooks/useTheme.ts"
         ]
       },
       {
-        "name": "Navigation Bar",
-        "description": "Responsive navigation with theme toggle, user profile display, and sign out functionality.",
+        "name": "Navigation & Routing",
+        "description": "Client-side routing with protected routes and navigation",
         "files": [
-          "frontend/src/components/Navbar.tsx"
-        ]
-      },
-      {
-        "name": "Main Layout",
-        "description": "Application layout wrapper with navigation bar and content area.",
-        "files": [
+          "frontend/src/App.tsx",
+          "frontend/src/components/Navbar.tsx",
           "frontend/src/components/MainLayout.tsx"
         ]
       },
       {
         "name": "Error Handling",
-        "description": "React error boundaries and loading components for async operations.",
+        "description": "Error boundary component for graceful error handling",
         "files": [
-          "frontend/src/components/ErrorBoundary.tsx",
-          "frontend/src/components/Loading.tsx"
+          "frontend/src/components/ErrorBoundary.tsx"
+        ]
+      },
+      {
+        "name": "Database Management",
+        "description": "LibSQL database utilities for user management, preferences, and activity logging",
+        "files": [
+          "backend/api/utils/database.py"
         ]
       },
       {
         "name": "API Client",
-        "description": "Centralized API client for authenticated requests with Google ID token in Authorization header.",
+        "description": "Frontend API client for communicating with backend services",
         "files": [
           "frontend/src/lib/api.ts"
         ]
       },
       {
-        "name": "User Management API",
-        "description": "REST API endpoints for user authentication, profile retrieval, preferences updates, and admin user management.",
+        "name": "Type Definitions",
+        "description": "TypeScript type definitions for issues, users, comments, and API responses",
         "files": [
-          "backend/api/routes/auth.py"
-        ]
-      },
-      {
-        "name": "Activity Logging",
-        "description": "User activity tracking in Turso activity_log table for audit trail of logins, logouts, and preference changes.",
-        "files": [
-          "backend/api/utils/database.py",
-          "backend/api/routes/auth.py"
-        ]
-      },
-      {
-        "name": "Health Check API",
-        "description": "Backend health monitoring endpoint to verify API availability.",
-        "files": [
-          "backend/api/index.py"
-        ]
-      },
-      {
-        "name": "Issue List View",
-        "description": "Filterable, searchable list of Jira issues with pagination. Supports desktop table and mobile card views with URL query param sync for shareable filters.",
-        "files": [
-          "frontend/src/pages/Issues.tsx",
-          "frontend/src/components/issues/IssueList.tsx",
-          "frontend/src/components/issues/FilterBar.tsx",
-          "frontend/src/components/issues/Pagination.tsx"
-        ]
-      },
-      {
-        "name": "Debounced Search",
-        "description": "Search input with 300ms debounce to filter issues via API call, reducing unnecessary requests.",
-        "files": [
-          "frontend/src/components/issues/SearchBar.tsx",
-          "frontend/src/pages/Issues.tsx"
-        ]
-      },
-      {
-        "name": "Issue Detail View",
-        "description": "Two-column detail page showing issue description with markdown rendering, comments, and activity timeline. Auto-refreshes every 30 seconds when tab is visible.",
-        "files": [
-          "frontend/src/pages/IssueDetail.tsx"
-        ]
-      },
-      {
-        "name": "Comments and Collaboration",
-        "description": "Comment list displaying issue comments with 'via Relay' or 'via Jira' badges, plus comment form with Cmd+Enter submit.",
-        "files": [
-          "frontend/src/components/issues/CommentList.tsx",
-          "frontend/src/components/issues/CommentForm.tsx"
-        ]
-      },
-      {
-        "name": "Activity Timeline",
-        "description": "Visual timeline showing issue history including status changes, assignments, and other updates.",
-        "files": [
-          "frontend/src/components/issues/ActivityTimeline.tsx"
-        ]
-      },
-      {
-        "name": "Status and Priority Editing",
-        "description": "Role-based dropdown controls for editing issue status and priority. Only visible to sqa and admin roles, enforcing role-based access.",
-        "files": [
-          "frontend/src/components/issues/StatusDropdown.tsx",
-          "frontend/src/components/issues/PriorityDropdown.tsx"
-        ]
-      },
-      {
-        "name": "Jira Cloud Integration",
-        "description": "Backend service layer for Jira Cloud REST API v3 with SQA template transformation and retry logic.",
-        "files": [
-          "backend/api/services/jira_service.py",
-          "backend/api/utils/template_builder.py",
-          "backend/api/routes/issues.py"
-        ]
-      },
-      {
-        "name": "SPA Navigation",
-        "description": "Simple pathname-based routing without react-router, using window.history.pushState and popstate events.",
-        "files": [
-          "frontend/src/App.tsx",
-          "frontend/src/components/Navbar.tsx"
+          "frontend/src/types/index.ts"
         ]
       }
     ]

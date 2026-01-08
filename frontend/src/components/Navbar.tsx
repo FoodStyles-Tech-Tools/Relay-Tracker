@@ -1,7 +1,48 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, Radio, LogOut, User, ChevronDown, Users, Home, ListTodo } from 'lucide-react';
+import { Sun, Moon, Radio, LogOut, User, ChevronDown, Users, Home, ListTodo, Wifi, WifiOff } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+
+// Network status hook
+function useNetworkStatus() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOnline;
+}
+
+function NetworkStatusIndicator() {
+  const isOnline = useNetworkStatus();
+
+  return (
+    <div
+      className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${
+        isOnline
+          ? 'bg-green-100 dark:bg-green-900/30'
+          : 'bg-red-100 dark:bg-red-900/30'
+      }`}
+      title={isOnline ? 'Online' : 'Offline'}
+    >
+      {isOnline ? (
+        <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+      ) : (
+        <WifiOff className="w-4 h-4 text-red-600 dark:text-red-400" />
+      )}
+    </div>
+  );
+}
 
 function NavLink({ href, children, isActive }: { href: string; children: React.ReactNode; isActive?: boolean }) {
   const handleClick = (e: React.MouseEvent) => {
@@ -97,6 +138,9 @@ export function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            {/* Network status indicator */}
+            <NetworkStatusIndicator />
+
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}

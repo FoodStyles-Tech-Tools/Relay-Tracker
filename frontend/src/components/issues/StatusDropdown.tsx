@@ -7,44 +7,101 @@ interface StatusDropdownProps {
   onChange: (status: IssueStatus) => void;
 }
 
+// Jira workflow statuses
 const STATUS_OPTIONS: IssueStatus[] = [
-  "Open",
-  "In Progress",
-  "In Review",
-  "Done",
-  "Cancelled",
+  "SQA INVESTIGATION",
+  "TO DO",
+  "SELECTED FOR DEVELOPMENT",
+  "REOPENED",
+  "IN PROGRESS",
+  "DEV COMPLETE",
+  "DEPLOYED TO DEV",
+  "QA",
+  "QA IN PROGRESS",
+  "QA PASSED",
+  "CANCELLED",
+  "DONE",
 ];
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  Open: {
+  "SQA INVESTIGATION": {
+    bg: "bg-purple-100 dark:bg-purple-900/30",
+    text: "text-purple-800 dark:text-purple-300",
+  },
+  "TO DO": {
+    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-800 dark:text-gray-300",
+  },
+  "SELECTED FOR DEVELOPMENT": {
+    bg: "bg-blue-100 dark:bg-blue-900/30",
+    text: "text-blue-800 dark:text-blue-300",
+  },
+  "REOPENED": {
+    bg: "bg-orange-100 dark:bg-orange-900/30",
+    text: "text-orange-800 dark:text-orange-300",
+  },
+  "IN PROGRESS": {
+    bg: "bg-blue-600 dark:bg-blue-600",
+    text: "text-white dark:text-white",
+  },
+  "DEV COMPLETE": {
+    bg: "bg-indigo-100 dark:bg-indigo-900/30",
+    text: "text-indigo-800 dark:text-indigo-300",
+  },
+  "DEPLOYED TO DEV": {
+    bg: "bg-cyan-100 dark:bg-cyan-900/30",
+    text: "text-cyan-800 dark:text-cyan-300",
+  },
+  "QA": {
+    bg: "bg-pink-100 dark:bg-pink-900/30",
+    text: "text-pink-800 dark:text-pink-300",
+  },
+  "QA IN PROGRESS": {
+    bg: "bg-pink-600 dark:bg-pink-600",
+    text: "text-white dark:text-white",
+  },
+  "QA PASSED": {
+    bg: "bg-green-600 dark:bg-green-600",
+    text: "text-white dark:text-white",
+  },
+  "CANCELLED": {
+    bg: "bg-slate-100 dark:bg-slate-800",
+    text: "text-slate-500 dark:text-slate-400",
+  },
+  "DONE": {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-800 dark:text-green-300",
+  },
+  // Legacy status support
+  "Open": {
     bg: "bg-blue-100 dark:bg-blue-900/30",
     text: "text-blue-700 dark:text-blue-300",
   },
   "To Do": {
-    bg: "bg-blue-100 dark:bg-blue-900/30",
-    text: "text-blue-700 dark:text-blue-300",
+    bg: "bg-gray-100 dark:bg-gray-800",
+    text: "text-gray-800 dark:text-gray-300",
   },
   "In Progress": {
-    bg: "bg-yellow-100 dark:bg-yellow-900/30",
-    text: "text-yellow-700 dark:text-yellow-300",
+    bg: "bg-blue-600 dark:bg-blue-600",
+    text: "text-white dark:text-white",
   },
   "In Review": {
     bg: "bg-purple-100 dark:bg-purple-900/30",
     text: "text-purple-700 dark:text-purple-300",
   },
-  Done: {
+  "Done": {
+    bg: "bg-green-100 dark:bg-green-900/30",
+    text: "text-green-800 dark:text-green-300",
+  },
+  "Resolved": {
     bg: "bg-green-100 dark:bg-green-900/30",
     text: "text-green-700 dark:text-green-300",
   },
-  Resolved: {
-    bg: "bg-green-100 dark:bg-green-900/30",
-    text: "text-green-700 dark:text-green-300",
+  "Cancelled": {
+    bg: "bg-slate-100 dark:bg-slate-800",
+    text: "text-slate-500 dark:text-slate-400",
   },
-  Cancelled: {
-    bg: "bg-gray-100 dark:bg-gray-800",
-    text: "text-gray-700 dark:text-gray-400",
-  },
-  Closed: {
+  "Closed": {
     bg: "bg-gray-100 dark:bg-gray-800",
     text: "text-gray-700 dark:text-gray-400",
   },

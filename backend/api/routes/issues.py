@@ -44,6 +44,7 @@ def list_issues():
         status = request.args.get("status")
         priority = request.args.get("priority")
         issue_type = request.args.get("type")
+        tool = request.args.get("tool")
         reporter = request.args.get("reporter")
         search = request.args.get("search")
         page = int(request.args.get("page", 1))
@@ -53,6 +54,7 @@ def list_issues():
             status=status,
             priority=priority,
             issue_type=issue_type,
+            tool=tool,
             reporter=reporter,
             search=search,
             page=page,

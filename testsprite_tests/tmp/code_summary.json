@@ -2,203 +2,160 @@
   "tech_stack": [
     "TypeScript",
     "React 19",
-    "Vite",
+    "Vite 7",
     "Tailwind CSS 4",
-    "@react-oauth/google",
-    "Python",
-    "Flask",
-    "Turso",
-    "libsql",
-    "SQLite",
-    "google-auth"
+    "Google OAuth",
+    "Python 3.13",
+    "Flask 3.1",
+    "Jira API",
+    "LibSQL",
+    "SendGrid",
+    "Lucide Icons"
   ],
   "features": [
     {
-      "name": "Direct Google OAuth Authentication",
-      "description": "Google OAuth integration using @react-oauth/google library with ID token flow. Backend verifies tokens using google-auth library and creates/retrieves users from Turso database.",
+      "name": "Google OAuth Authentication",
+      "description": "User authentication using Google OAuth 2.0 with role-based access control (user, sqa, admin)",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/pages/Login.tsx",
         "frontend/src/context/AuthContext.tsx",
         "frontend/src/hooks/useAuth.ts",
+        "frontend/src/components/ProtectedRoute.tsx",
+        "backend/api/routes/auth.py",
         "backend/api/utils/auth.py"
       ]
     },
     {
-      "name": "Turso Database Integration",
-      "description": "SQLite database via Turso (libsql) with user_roles, user_preferences, and activity_log tables. Automatic first-user admin assignment implemented in database layer.",
+      "name": "Dashboard",
+      "description": "Landing page with quick actions to create bugs, tasks, stories and recent issues widget",
       "files": [
-        "backend/api/utils/database.py",
-        "backend/api/models/schema.sql"
+        "frontend/src/App.tsx",
+        "frontend/src/components/issues/DashboardIssueList.tsx"
       ]
     },
     {
-      "name": "First User Admin Assignment",
-      "description": "Automatic admin role assignment for the first user to register. Implemented in create_user function by counting existing users.",
+      "name": "Issue Creation Modal",
+      "description": "Modal dialog for creating new Jira issues with form validation and toast notifications",
       "files": [
-        "backend/api/utils/database.py"
+        "frontend/src/components/issues/CreateIssueModal.tsx",
+        "backend/api/routes/issues.py"
       ]
     },
     {
-      "name": "Google ID Token Verification",
-      "description": "Backend middleware that verifies Google ID tokens using google.oauth2.id_token. Validates tokens against Google OAuth Client ID and rejects invalid/expired tokens with 401.",
+      "name": "Issues List & Filtering",
+      "description": "Paginated issue list with filtering by status, priority, type, reporter, and search",
       "files": [
-        "backend/api/utils/auth.py"
+        "frontend/src/pages/Issues.tsx",
+        "frontend/src/components/issues/IssueList.tsx",
+        "frontend/src/components/issues/FilterBar.tsx",
+        "frontend/src/components/issues/SearchBar.tsx",
+        "frontend/src/components/issues/Pagination.tsx",
+        "backend/api/routes/issues.py",
+        "backend/api/services/jira_service.py"
       ]
     },
     {
-      "name": "Role-Based Access Control",
-      "description": "Role-based authorization with require_role decorator supporting user, sqa, and admin roles from Turso database.",
+      "name": "Issue Detail View",
+      "description": "Detailed view of individual issues with comments, attachments, activity timeline, and status updates",
       "files": [
-        "backend/api/utils/auth.py",
+        "frontend/src/pages/IssueDetail.tsx",
+        "frontend/src/components/issues/CommentList.tsx",
+        "frontend/src/components/issues/CommentForm.tsx",
+        "frontend/src/components/issues/ActivityTimeline.tsx",
+        "frontend/src/components/issues/StatusDropdown.tsx",
+        "frontend/src/components/issues/PriorityDropdown.tsx",
+        "backend/api/routes/issues.py"
+      ]
+    },
+    {
+      "name": "Jira Integration",
+      "description": "Backend service for interacting with Jira API to create, update, fetch issues and manage attachments",
+      "files": [
+        "backend/api/services/jira_service.py",
+        "backend/api/utils/template_builder.py"
+      ]
+    },
+    {
+      "name": "Email Notifications",
+      "description": "SendGrid-based email notifications for issue creation, status changes, and new comments",
+      "files": [
+        "backend/api/services/email_service.py"
+      ]
+    },
+    {
+      "name": "Bulk Status Updates",
+      "description": "Bulk update status for multiple issues (SQA and Admin only)",
+      "files": [
+        "frontend/src/components/issues/BulkActionBar.tsx",
+        "backend/api/routes/issues.py"
+      ]
+    },
+    {
+      "name": "User Profile & Preferences",
+      "description": "User profile page with notification preferences and theme settings",
+      "files": [
+        "frontend/src/pages/Profile.tsx",
         "backend/api/routes/auth.py"
       ]
     },
     {
-      "name": "Protected Routes",
-      "description": "Frontend route protection that redirects unauthenticated users to login page.",
+      "name": "Admin Settings",
+      "description": "Admin page for managing user roles and system settings",
       "files": [
-        "frontend/src/components/ProtectedRoute.tsx"
-      ]
-    },
-    {
-      "name": "User Preferences Management",
-      "description": "User preferences stored in Turso including theme (light/dark/system), email notifications, and discord notifications with API endpoints for updates.",
-      "files": [
-        "frontend/src/context/AuthContext.tsx",
+        "frontend/src/pages/AdminSettings.tsx",
         "backend/api/routes/auth.py",
         "backend/api/utils/database.py"
       ]
     },
     {
-      "name": "Theme System",
-      "description": "Dark mode and light mode theme support with system preference detection stored in Turso user_preferences.",
+      "name": "Toast Notifications",
+      "description": "User feedback system with toast notifications for success, error, and info messages",
       "files": [
-        "frontend/src/hooks/useTheme.ts",
-        "frontend/src/index.css"
+        "frontend/src/components/Toast.tsx",
+        "frontend/src/lib/toast.ts"
       ]
     },
     {
-      "name": "Dashboard",
-      "description": "Main dashboard with backend health monitoring, user welcome message, and quick action buttons for bugs and tasks.",
+      "name": "Theme Management",
+      "description": "Dark/light theme support with system preference detection",
       "files": [
-        "frontend/src/App.tsx"
+        "frontend/src/hooks/useTheme.ts"
       ]
     },
     {
-      "name": "Navigation Bar",
-      "description": "Responsive navigation with theme toggle, user profile display, and sign out functionality.",
+      "name": "Navigation & Routing",
+      "description": "Client-side routing with protected routes and navigation",
       "files": [
-        "frontend/src/components/Navbar.tsx"
-      ]
-    },
-    {
-      "name": "Main Layout",
-      "description": "Application layout wrapper with navigation bar and content area.",
-      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/components/Navbar.tsx",
         "frontend/src/components/MainLayout.tsx"
       ]
     },
     {
       "name": "Error Handling",
-      "description": "React error boundaries and loading components for async operations.",
+      "description": "Error boundary component for graceful error handling",
       "files": [
-        "frontend/src/components/ErrorBoundary.tsx",
-        "frontend/src/components/Loading.tsx"
+        "frontend/src/components/ErrorBoundary.tsx"
+      ]
+    },
+    {
+      "name": "Database Management",
+      "description": "LibSQL database utilities for user management, preferences, and activity logging",
+      "files": [
+        "backend/api/utils/database.py"
       ]
     },
     {
       "name": "API Client",
-      "description": "Centralized API client for authenticated requests with Google ID token in Authorization header.",
+      "description": "Frontend API client for communicating with backend services",
       "files": [
         "frontend/src/lib/api.ts"
       ]
     },
     {
-      "name": "User Management API",
-      "description": "REST API endpoints for user authentication, profile retrieval, preferences updates, and admin user management.",
+      "name": "Type Definitions",
+      "description": "TypeScript type definitions for issues, users, comments, and API responses",
       "files": [
-        "backend/api/routes/auth.py"
-      ]
-    },
-    {
-      "name": "Activity Logging",
-      "description": "User activity tracking in Turso activity_log table for audit trail of logins, logouts, and preference changes.",
-      "files": [
-        "backend/api/utils/database.py",
-        "backend/api/routes/auth.py"
-      ]
-    },
-    {
-      "name": "Health Check API",
-      "description": "Backend health monitoring endpoint to verify API availability.",
-      "files": [
-        "backend/api/index.py"
-      ]
-    },
-    {
-      "name": "Issue List View",
-      "description": "Filterable, searchable list of Jira issues with pagination. Supports desktop table and mobile card views with URL query param sync for shareable filters.",
-      "files": [
-        "frontend/src/pages/Issues.tsx",
-        "frontend/src/components/issues/IssueList.tsx",
-        "frontend/src/components/issues/FilterBar.tsx",
-        "frontend/src/components/issues/Pagination.tsx"
-      ]
-    },
-    {
-      "name": "Debounced Search",
-      "description": "Search input with 300ms debounce to filter issues via API call, reducing unnecessary requests.",
-      "files": [
-        "frontend/src/components/issues/SearchBar.tsx",
-        "frontend/src/pages/Issues.tsx"
-      ]
-    },
-    {
-      "name": "Issue Detail View",
-      "description": "Two-column detail page showing issue description with markdown rendering, comments, and activity timeline. Auto-refreshes every 30 seconds when tab is visible.",
-      "files": [
-        "frontend/src/pages/IssueDetail.tsx"
-      ]
-    },
-    {
-      "name": "Comments and Collaboration",
-      "description": "Comment list displaying issue comments with 'via Relay' or 'via Jira' badges, plus comment form with Cmd+Enter submit.",
-      "files": [
-        "frontend/src/components/issues/CommentList.tsx",
-        "frontend/src/components/issues/CommentForm.tsx"
-      ]
-    },
-    {
-      "name": "Activity Timeline",
-      "description": "Visual timeline showing issue history including status changes, assignments, and other updates.",
-      "files": [
-        "frontend/src/components/issues/ActivityTimeline.tsx"
-      ]
-    },
-    {
-      "name": "Status and Priority Editing",
-      "description": "Role-based dropdown controls for editing issue status and priority. Only visible to sqa and admin roles, enforcing role-based access.",
-      "files": [
-        "frontend/src/components/issues/StatusDropdown.tsx",
-        "frontend/src/components/issues/PriorityDropdown.tsx"
-      ]
-    },
-    {
-      "name": "Jira Cloud Integration",
-      "description": "Backend service layer for Jira Cloud REST API v3 with SQA template transformation and retry logic.",
-      "files": [
-        "backend/api/services/jira_service.py",
-        "backend/api/utils/template_builder.py",
-        "backend/api/routes/issues.py"
-      ]
-    },
-    {
-      "name": "SPA Navigation",
-      "description": "Simple pathname-based routing without react-router, using window.history.pushState and popstate events.",
-      "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/components/Navbar.tsx"
+        "frontend/src/types/index.ts"
       ]
     }
   ]

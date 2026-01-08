@@ -124,6 +124,9 @@ export async function fetchIssues(
   if (filters.type?.length) {
     params.type = filters.type.join(",");
   }
+  if (filters.tool?.length) {
+    params.tool = filters.tool.join(",");
+  }
   if (filters.reporter) {
     params.reporter = filters.reporter;
   }
@@ -192,8 +195,11 @@ export async function bulkUpdateIssueStatus(
   issueKeys: string[],
   status: IssueStatus
 ): Promise<{ updated: number; failed: string[] }> {
-  return api.post<{ updated: number; failed: string[] }>("/api/issues/bulk/status", {
-    issue_keys: issueKeys,
-    status,
-  });
+  return api.post<{ updated: number; failed: string[] }>(
+    "/api/issues/bulk/status",
+    {
+      issue_keys: issueKeys,
+      status,
+    }
+  );
 }
