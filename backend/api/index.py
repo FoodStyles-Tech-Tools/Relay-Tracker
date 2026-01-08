@@ -10,15 +10,21 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configure CORS
-# For development, allow all variations of local dev servers
+# Allow localhost for development and Vercel domains for production
 def get_origins():
-    return [
+    frontend_url = os.getenv("FRONTEND_URL")
+    origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:5001",
         "http://127.0.0.1:5001",
         "https://relay-tracker.vercel.app",
+        "https://relay-five-coral.vercel.app",
     ]
+    # Add custom frontend URL if set
+    if frontend_url and frontend_url not in origins:
+        origins.append(frontend_url)
+    return origins
 
 # Apply CORS to all routes
 CORS(app, resources={r"/*": {"origins": get_origins()}}, supports_credentials=True, allow_headers=["Content-Type", "Authorization", "X-Requested-With"])
