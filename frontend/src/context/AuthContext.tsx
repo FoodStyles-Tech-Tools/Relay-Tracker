@@ -16,8 +16,8 @@ export type {
 } from "./auth-context";
 export { AuthContext } from "./auth-context";
 
-// In production (Vercel), API is at same origin. In dev, set VITE_API_URL=http://localhost:5001
-const API_URL = import.meta.env.VITE_API_URL || "";
+// API URL: empty string = same origin (production), set VITE_API_URL for local dev
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 const TOKEN_STORAGE_KEY = "relay_id_token";
 
 interface AuthProviderProps {
