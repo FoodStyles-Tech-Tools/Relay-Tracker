@@ -135,7 +135,7 @@ def _should_send_email(user_email: str) -> bool:
         True if email should be sent, False otherwise
     """
     try:
-        from api.utils.database import get_user_by_email, get_user_preferences
+        from ..utils.database import get_user_by_email, get_user_preferences
 
         user = get_user_by_email(user_email)
         if not user:

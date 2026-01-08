@@ -29,9 +29,9 @@ def get_origins():
 # Apply CORS to all routes
 CORS(app, resources={r"/*": {"origins": get_origins()}}, supports_credentials=True, allow_headers=["Content-Type", "Authorization", "X-Requested-With"])
 
-# Register blueprints
-from api.routes.auth import auth_bp  # noqa: E402
-from api.routes.issues import issues_bp  # noqa: E402
+# Register blueprints - use relative imports for Vercel compatibility
+from .routes.auth import auth_bp  # noqa: E402
+from .routes.issues import issues_bp  # noqa: E402
 app.register_blueprint(auth_bp)
 app.register_blueprint(issues_bp)
 

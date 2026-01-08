@@ -8,7 +8,7 @@ from flask import request, jsonify, g
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-from api.utils.database import (
+from .database import (
     get_or_create_user,
     get_user_by_id,
     get_user_preferences as db_get_user_preferences,

@@ -2,13 +2,13 @@
 
 from flask import Blueprint, jsonify, request, g
 
-from api.utils.auth import (
+from ..utils.auth import (
     require_auth,
     require_role,
     get_user_preferences,
     log_activity,
 )
-from api.utils.database import (
+from ..utils.database import (
     update_user_preferences,
     update_user_role as db_update_user_role,
     get_all_users,

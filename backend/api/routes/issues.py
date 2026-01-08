@@ -5,10 +5,10 @@ Exposes Jira functionality to the frontend.
 
 from flask import Blueprint, jsonify, request, g
 
-from api.utils.auth import require_auth, require_role, log_activity
-from api.utils.template_builder import parse_user_agent
-from api.services.email_service import notify_issue_created, notify_status_changed, notify_comment_added
-from api.services.jira_service import (
+from ..utils.auth import require_auth, require_role, log_activity
+from ..utils.template_builder import parse_user_agent
+from ..services.email_service import notify_issue_created, notify_status_changed, notify_comment_added
+from ..services.jira_service import (
     fetch_issues,
     get_issue,
     create_issue,
@@ -398,7 +398,7 @@ def delete_issue(issue_key: str):
     user = g.user
 
     try:
-        from api.services.jira_service import transition_issue
+        from ..services.jira_service import transition_issue
 
         result = transition_issue(issue_key, "Cancelled")
 
@@ -450,7 +450,7 @@ def bulk_update_status():
     if not new_status:
         return jsonify({"error": "status is required"}), 400
 
-    from api.services.jira_service import transition_issue
+    from ..services.jira_service import transition_issue
 
     updated = 0
     failed = []

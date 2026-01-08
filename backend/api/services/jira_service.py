@@ -410,7 +410,7 @@ def create_issue(
     Returns:
         Dict with created issue key and self URL
     """
-    from api.utils.template_builder import build_jira_description
+    from ..utils.template_builder import build_jira_description
 
     jira = get_jira_client()
     project_key = get_project_key()
