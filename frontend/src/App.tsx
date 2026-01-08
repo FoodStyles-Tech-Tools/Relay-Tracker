@@ -23,7 +23,7 @@ const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || "").trim();
 console.log("🏛️ Relay Auth Debug:", {
   origin: window.location.origin,
   clientId: GOOGLE_CLIENT_ID,
-  backendUrl: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:5001" : window.location.origin),
+  backendUrl: import.meta.env.VITE_API_URL || window.location.origin,
   hasClientId: !!GOOGLE_CLIENT_ID,
   nodeEnv: import.meta.env.MODE,
 });
