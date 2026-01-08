@@ -16,7 +16,9 @@ class ApiClient {
     endpoint: string,
     params?: Record<string, string | number | boolean | undefined>
   ): string {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+    // Handle empty baseUrl (same-origin) by using window.location.origin
+    const base = this.baseUrl || window.location.origin;
+    const url = new URL(`${base}${endpoint}`);
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
