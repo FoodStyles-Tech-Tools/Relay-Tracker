@@ -96,8 +96,25 @@ def get_user_by_email(email: str) -> Optional[dict]:
 
 
 def create_user(user_id: str, email: str, name: str = None, avatar_url: str = None) -> dict:
-    """Create a new user. First user gets admin role."""
+    """Create a new user. First user gets admin role.
+
+    Raises:
+        ValueError: If email is not whitelisted
+    """
     conn = get_connection()
+
+    # Check if email is whitelisted (skip check if no whitelist table exists yet or is empty)
+    try:
+        whitelist_count = conn.execute("SELECT COUNT(*) FROM allowed_emails").fetchone()[0]
+        if whitelist_count > 0 and not is_email_whitelisted(email):
+            raise ValueError(
+                f"Email {email} is not authorized to access this application. "
+                "Please contact an administrator to be added to the whitelist."
+            )
+    except Exception as e:
+        # If table doesn't exist yet, skip whitelist check (first-time setup)
+        if "no such table" not in str(e).lower():
+            raise
 
     # Check if this is the first user
     count = conn.execute("SELECT COUNT(*) FROM user_roles").fetchone()[0]
@@ -224,3 +241,122 @@ def log_activity(user_id: str, action: str, jira_issue_key: str = None, metadata
         (user_id, action, jira_issue_key, json.dumps(metadata or {}))
     )
     conn.commit()
+
+
+# ============================================
+# Email Whitelist Functions
+# ============================================
+
+def is_email_whitelisted(email: str) -> bool:
+    """Check if email is in the whitelist (case-insensitive)."""
+    conn = get_connection()
+    result = conn.execute(
+        "SELECT COUNT(*) FROM allowed_emails WHERE LOWER(email) = LOWER(?)",
+        (email,)
+    ).fetchone()
+    return result[0] > 0
+
+
+def get_all_whitelisted_emails() -> list:
+    """Get all whitelisted emails with metadata."""
+    conn = get_connection()
+    results = conn.execute(
+        """SELECT ae.id, ae.email, ae.added_by, ae.notes, ae.created_at, ur.name as added_by_name
+           FROM allowed_emails ae
+           LEFT JOIN user_roles ur ON ae.added_by = ur.user_id
+           ORDER BY ae.created_at DESC"""
+    ).fetchall()
+
+    return [
+        {
+            "id": r[0],
+            "email": r[1],
+            "added_by": r[2],
+            "notes": r[3],
+            "created_at": r[4],
+            "added_by_name": r[5],
+        }
+        for r in results
+    ]
+
+
+def add_email_to_whitelist(email: str, added_by: str, notes: str = None) -> dict:
+    """Add email to whitelist."""
+    conn = get_connection()
+
+    # Check if already exists
+    existing = conn.execute(
+        "SELECT id FROM allowed_emails WHERE LOWER(email) = LOWER(?)",
+        (email,)
+    ).fetchone()
+
+    if existing:
+        raise ValueError(f"Email {email} is already whitelisted")
+
+    # Insert new email (store lowercase)
+    conn.execute(
+        """INSERT INTO allowed_emails (email, added_by, notes)
+           VALUES (?, ?, ?)""",
+        (email.lower(), added_by, notes)
+    )
+    conn.commit()
+
+    # Return the added email record
+    result = conn.execute(
+        """SELECT ae.id, ae.email, ae.added_by, ae.notes, ae.created_at, ur.name as added_by_name
+           FROM allowed_emails ae
+           LEFT JOIN user_roles ur ON ae.added_by = ur.user_id
+           WHERE LOWER(ae.email) = LOWER(?)""",
+        (email,)
+    ).fetchone()
+
+    return {
+        "id": result[0],
+        "email": result[1],
+        "added_by": result[2],
+        "notes": result[3],
+        "created_at": result[4],
+        "added_by_name": result[5],
+    }
+
+
+def remove_email_from_whitelist(email_id: int) -> bool:
+    """Remove email from whitelist by ID."""
+    conn = get_connection()
+
+    # Check if exists
+    existing = conn.execute(
+        "SELECT email FROM allowed_emails WHERE id = ?",
+        (email_id,)
+    ).fetchone()
+
+    if not existing:
+        raise ValueError(f"Email with ID {email_id} not found in whitelist")
+
+    conn.execute("DELETE FROM allowed_emails WHERE id = ?", (email_id,))
+    conn.commit()
+
+    return True
+
+
+def get_whitelisted_email_by_id(email_id: int) -> Optional[dict]:
+    """Get a whitelisted email by ID."""
+    conn = get_connection()
+    result = conn.execute(
+        """SELECT ae.id, ae.email, ae.added_by, ae.notes, ae.created_at, ur.name as added_by_name
+           FROM allowed_emails ae
+           LEFT JOIN user_roles ur ON ae.added_by = ur.user_id
+           WHERE ae.id = ?""",
+        (email_id,)
+    ).fetchone()
+
+    if result:
+        return {
+            "id": result[0],
+            "email": result[1],
+            "added_by": result[2],
+            "notes": result[3],
+            "created_at": result[4],
+            "added_by_name": result[5],
+        }
+    return None

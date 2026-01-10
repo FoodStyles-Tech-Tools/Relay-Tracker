@@ -32,8 +32,10 @@ CORS(app, resources={r"/*": {"origins": get_origins()}}, supports_credentials=Tr
 # Register blueprints - use relative imports for Vercel compatibility
 from .routes.auth import auth_bp  # noqa: E402
 from .routes.issues import issues_bp  # noqa: E402
+from .routes.whitelist import whitelist_bp  # noqa: E402
 app.register_blueprint(auth_bp)
 app.register_blueprint(issues_bp)
+app.register_blueprint(whitelist_bp)
 
 
 @app.route("/api/health", methods=["GET"])
@@ -67,6 +69,12 @@ def root():
                 "comments": "POST /api/issues/{key}/comments",
                 "attachments": "POST /api/issues/{key}/attachments",
                 "updates": "GET /api/issues/updates",
+            },
+            "whitelist": {
+                "list": "GET /api/whitelist",
+                "add": "POST /api/whitelist",
+                "remove": "DELETE /api/whitelist/{id}",
+                "check": "GET /api/whitelist/check/{email}",
             },
         }
     })

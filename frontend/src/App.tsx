@@ -14,6 +14,7 @@ import { IssuesPage } from "./pages/Issues";
 import { IssueDetailPage } from "./pages/IssueDetail";
 import { ProfilePage } from "./pages/Profile";
 import { AdminSettingsPage } from "./pages/AdminSettings";
+import { WhitelistManagementPage } from "./pages/WhitelistManagement";
 import { CreateIssueModal, DashboardIssueList } from "./components/issues";
 import { Radio, Bug, ListTodo, BookOpen, XCircle } from "lucide-react";
 import { checkHealth } from "./lib/api";
@@ -237,6 +238,11 @@ function AppRouter() {
   // Match admin route
   if (route === "/admin") {
     return <AdminSettingsPage />;
+  }
+
+  // Match whitelist management route
+  if (route === "/admin/whitelist") {
+    return <WhitelistManagementPage />;
   }
 
   return <Dashboard onNavigate={navigate} />;

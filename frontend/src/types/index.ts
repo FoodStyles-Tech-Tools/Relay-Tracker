@@ -116,3 +116,13 @@ export interface IssueFilters {
   page?: number;
   limit?: number;
 }
+
+// Whitelist types
+export interface WhitelistEmail {
+  id: number;
+  email: string;
+  added_by: string | null;
+  notes: string | null;
+  created_at: string;
+  added_by_name?: string | null;
+}

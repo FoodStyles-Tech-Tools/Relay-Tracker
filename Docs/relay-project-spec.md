@@ -1218,6 +1218,387 @@ DELIVERABLES:
 
 ---
 
+### MISSION 11: Email Whitelist Authentication + README Updates (5-6h review time)
+
+```
+
+Implement private access control via email whitelist and update all documentation.
+
+PROBLEM:
+
+- Currently anyone with a Google account can sign in
+- Need private access for internal team only
+- README files have outdated tech stack information (Supabase → Turso/Google OAuth)
+- Missing comprehensive setup documentation
+
+SOLUTION:
+Implement email whitelist authentication (Option B) + update all README files.
+
+---
+
+PART 1: DATABASE SCHEMA
+
+Create new table for email whitelist:
+
+CREATE TABLE IF NOT EXISTS allowed_emails (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+email TEXT NOT NULL UNIQUE,
+added_by TEXT,
+notes TEXT,
+created_at TEXT DEFAULT (datetime('now')),
+FOREIGN KEY (added_by) REFERENCES user_roles(user_id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_allowed_emails_email ON allowed_emails(email);
+
+Migration Script (backend/migrate_whitelist.py):
+
+- Check if table exists
+- Create table if missing
+- Automatically whitelist all existing users from user_roles
+- Print summary of whitelisted emails
+- Safe to run multiple times (idempotent)
+
+---
+
+PART 2: BACKEND - DATABASE UTILITIES
+
+Update backend/api/utils/database.py:
+
+Add new functions (append to end of file):
+
+1. is_email_whitelisted(email: str) -> bool
+
+   - Check if email exists in allowed_emails table
+   - Case-insensitive comparison
+   - Return True/False
+
+2. get_all_whitelisted_emails() -> list
+
+   - Get all whitelisted emails with metadata
+   - Order by created_at DESC
+   - Return list of dicts with: id, email, added_by, notes, created_at
+
+3. add_email_to_whitelist(email: str, added_by: str, notes: str = None) -> dict
+
+   - Add email to whitelist
+   - Check if already exists (raise ValueError if duplicate)
+   - Store email in lowercase
+   - Return added email record
+
+4. remove_email_from_whitelist(email: str) -> bool
+   - Remove email from whitelist
+   - Check if exists (raise ValueError if not found)
+   - Return True on success
+
+Modify create_user() function:
+
+- Add whitelist check at the beginning
+- If email not whitelisted, raise ValueError with message:
+  "Email {email} is not authorized to access this application. Please contact an administrator."
+- Continue with existing user creation logic if whitelisted
+
+---
+
+PART 3: BACKEND - API ROUTES
+
+Create new file: backend/api/routes/whitelist.py
+
+Admin-only endpoints for managing email whitelist:
+
+GET /api/whitelist
+
+- List all whitelisted emails
+- Requires: @require_auth, @require_role("admin")
+- Returns: { emails: [...], total: number }
+
+POST /api/whitelist
+
+- Add email to whitelist
+- Requires: @require_auth, @require_role("admin")
+- Body: { email: string, notes?: string }
+- Validates email format (must contain @ and .)
+- Returns: { success: true, email: {...} }
+- Logs activity
+
+DELETE /api/whitelist/{id}
+
+- Remove email from whitelist
+- Requires: @require_auth, @require_role("admin")
+- Prevents removing your own email
+- Returns: { success: true, message: string }
+- Logs activity
+
+GET /api/whitelist/check/{email}
+
+- Check if email is whitelisted
+- Requires: @require_auth, @require_role("admin")
+- Returns: { email: string, whitelisted: boolean }
+
+Update backend/api/index.py:
+
+- Import whitelist_bp
+- Register blueprint: app.register_blueprint(whitelist_bp)
+- Add to root endpoint documentation
+
+---
+
+PART 4: FRONTEND - WHITELIST MANAGEMENT UI
+
+Create new file: frontend/src/pages/WhitelistManagement.tsx
+
+Admin page for managing whitelisted emails:
+
+LAYOUT:
+
+- Header with icon + title "Email Whitelist"
+- Description: "Manage who can access Relay"
+- Search bar + "Add Email" button
+- Table/list of whitelisted emails
+- Info box: "Only whitelisted emails can sign in with Google OAuth"
+
+TABLE COLUMNS:
+
+- Email address
+- Added by (user name/email)
+- Notes
+- Date added
+- Actions (Remove button)
+
+ADD EMAIL MODAL:
+
+- Email input (required, validated)
+- Notes textarea (optional)
+- Cancel + Add buttons
+- Validation:
+  - Email format check
+  - Duplicate check
+  - Show error if already exists
+- Success toast on add
+
+REMOVE EMAIL CONFIRMATION:
+
+- Confirm dialog before removing
+- Show email being removed
+- Prevent removing own email
+- Success toast on remove
+
+FEATURES:
+
+- Search/filter emails
+- Loading states
+- Error handling
+- Responsive design
+- Glassmorphism style matching AdminSettings
+- Orange/red accent colors
+
+---
+
+PART 5: FRONTEND - API CLIENT
+
+Update frontend/src/lib/api.ts:
+
+Add whitelist functions:
+
+export async function fetchWhitelistedEmails(): Promise<WhitelistEmail[]>
+export async function addEmailToWhitelist(email: string, notes?: string): Promise<WhitelistEmail>
+export async function removeEmailFromWhitelist(emailId: number): Promise<void>
+export async function checkEmailWhitelisted(email: string): Promise<boolean>
+
+Update frontend/src/types/index.ts:
+
+Add type:
+export interface WhitelistEmail {
+id: number;
+email: string;
+added_by: string | null;
+notes: string | null;
+created_at: string;
+}
+
+---
+
+PART 6: FRONTEND - NAVIGATION
+
+Update frontend/src/App.tsx:
+
+- Import WhitelistManagementPage
+- Add route: <Route path="/admin/whitelist" element={<WhitelistManagementPage />} />
+
+Update frontend/src/components/Navbar.tsx:
+
+- Add "Email Whitelist" link in admin dropdown
+- Only show if hasRole("admin")
+- Link to /admin/whitelist
+
+---
+
+PART 7: DOCUMENTATION UPDATES
+
+Create NEW file: README.md (root of project)
+
+Content:
+
+- Project overview with tagline
+- Features list (modern UI, private access, Jira sync, roles, notifications)
+- Tech stack (React 19, Flask, Turso, Direct Google OAuth)
+- Access control explanation (email whitelist)
+- User roles table
+- Project structure
+- Getting started (prerequisites, setup steps)
+- Environment variables (complete tables for backend + frontend)
+- First-time setup: How to add first admin email via Turso CLI
+- Deployment instructions (Vercel)
+- API endpoints list
+- Branding info
+- Security notes
+- License
+
+Update frontend/README.md:
+
+Replace entire file with Relay-specific content:
+
+- Tech stack
+- Project structure (src/ breakdown)
+- Development setup
+- Available scripts (dev, build, preview, lint)
+- Environment variables
+- Features (auth, issue management, admin, UI/UX)
+- Code style
+- Deployment
+- Links to other docs
+
+Create NEW file: backend/README.md
+
+Content:
+
+- Tech stack (Flask, Turso, Jira API, Google OAuth)
+- Project structure (api/ breakdown)
+- Development setup
+- Environment variables with descriptions
+- How to get API credentials (Jira, Google, Turso)
+- Database schema explanation
+- API endpoints list
+- Authentication flow diagram
+- Jira integration explanation
+- Deployment
+- Development tips (testing, migrations, debugging)
+
+Update Docs/README.md:
+
+Fix outdated references:
+
+- Line 13: "Supabase Auth" → "Direct Google OAuth 2.0"
+- Line 25: "Supabase Auth" → "Direct Google OAuth 2.0"
+- Line 30: "Supabase PostgreSQL" → "Turso (libsql)"
+- Lines 89-91: Replace Supabase env vars with Google OAuth + Turso
+- Lines 143-157: Update environment variables table (remove Supabase, add Turso + Google OAuth)
+
+---
+
+PART 8: FIRST-TIME SETUP INSTRUCTIONS
+
+Add to all README files:
+
+IMPORTANT: First-Time Deployment
+Before anyone can sign in, add the first admin email to the whitelist:
+
+Using Turso CLI:
+turso db shell your-database-name
+
+In Turso shell:
+INSERT INTO allowed_emails (email, notes)
+VALUES ('your-email@example.com', 'First admin user');
+
+The first user to sign in will automatically become admin.
+After that, use the Admin > Email Whitelist page to add more users.
+
+---
+
+TESTING CHECKLIST:
+
+Database:
+✅ Run migrate_whitelist.py successfully
+✅ Verify allowed_emails table created
+✅ Existing users automatically whitelisted
+✅ Can query whitelisted emails
+
+Backend API:
+✅ GET /api/whitelist returns all emails (admin only)
+✅ POST /api/whitelist adds new email (admin only)
+✅ DELETE /api/whitelist/{id} removes email (admin only)
+✅ Cannot remove own email
+✅ Non-admin users get 403 Forbidden
+✅ Duplicate emails return error
+✅ Invalid email format returns error
+
+Authentication:
+✅ Non-whitelisted email cannot sign in
+✅ Error message is clear and helpful
+✅ Whitelisted email can sign in
+✅ New user created successfully
+✅ Existing users still work
+
+Frontend UI:
+✅ Admin can access /admin/whitelist
+✅ Non-admin gets access denied
+✅ Can view all whitelisted emails
+✅ Can add new email with notes
+✅ Can remove email (not own)
+✅ Search/filter works
+✅ Loading states show
+✅ Error messages display
+✅ Success toasts appear
+✅ Responsive on mobile
+
+Documentation:
+✅ Root README.md is accurate
+✅ Frontend README.md is Relay-specific
+✅ Backend README.md has setup instructions
+✅ Docs/README.md has no Supabase references
+✅ All environment variables documented
+✅ First-time setup instructions clear
+✅ Links between docs work
+
+Deployment:
+✅ Deploy to Vercel
+✅ Add admin email to production Turso
+✅ Test sign-in on production
+✅ Verify whitelist management works
+✅ Test adding/removing emails in production
+
+---
+
+DELIVERABLES:
+
+Backend:
+
+- migrate_whitelist.py (migration script)
+- Updated database.py with whitelist functions
+- New whitelist.py routes file
+- Updated index.py with whitelist blueprint
+
+Frontend:
+
+- WhitelistManagement.tsx page
+- Updated api.ts with whitelist functions
+- Updated types/index.ts with WhitelistEmail type
+- Updated App.tsx with route
+- Updated Navbar.tsx with link
+
+Documentation:
+
+- README.md (root) - NEW
+- frontend/README.md - UPDATED
+- backend/README.md - NEW
+- Docs/README.md - UPDATED
+
+All files follow Relay branding (orange/red gradient, glassmorphism, modern design).
+
+```
+
+---
+
 ## 📋 MISSION SUMMARY
 
 1. ✅ Project Foundation (3-4h)
@@ -1230,8 +1611,9 @@ DELIVERABLES:
 8. ✅ Dashboard (3-4h)
 9. ✅ Polling System (3-4h)
 10. ✅ Deployment (4-5h)
+11. 🔄 Email Whitelist + README Updates (5-6h)
 
-**Total: 40-54 hours of review/testing time**
+**Total: 45-60 hours of review/testing time**
 
 ---
 
@@ -1244,7 +1626,7 @@ DELIVERABLES:
 5. Test locally
 6. Provide feedback
 7. Once approved → Move to MISSION 2
-8. Repeat for all 10 missions
+8. Repeat for all 11 missions
 
 ---
 
@@ -1254,7 +1636,7 @@ Before starting, prepare:
 1. ✅ Jira Cloud admin access
 2. ✅ Jira API token
 3. ✅ Jira project key
-4. ✅ Supabase account (free tier)
+4. ✅ Turso account (free tier)
 5. ✅ SendGrid account (free tier)
 6. ✅ Discord webhooks (3 channels created)
 7. ✅ Google Cloud Console (for OAuth)
@@ -1266,14 +1648,16 @@ Before starting, prepare:
 
 ### Why This Architecture?
 - **Pure passthrough (Option A)**: Simplest approach, no data sync issues
-- **Supabase for preferences only**: Keeps user settings without complicating data flow
+- **Turso for preferences only**: Keeps user settings and whitelist without complicating data flow
 - **Polling vs Webhooks**: Polling is easier for MVP, webhooks can be added later
 - **Flask serverless**: Matches your existing tech stack, easy to maintain
+- **Email whitelist**: Private access control without complex user management
 
 ### Estimated Timeline
 - **Week 1**: Missions 1-5 (Foundation + Core UI)
 - **Week 2**: Missions 6-10 (Features + Deployment)
-- **Total**: ~2 weeks with AI assistance
+- **Week 3**: Mission 11 (Security + Documentation)
+- **Total**: ~2-3 weeks with AI assistance
 
 ### Success Metrics
 - ✅ 80 users can submit bugs/tasks

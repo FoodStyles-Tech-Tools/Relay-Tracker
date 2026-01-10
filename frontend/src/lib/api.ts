@@ -206,3 +206,35 @@ export async function bulkUpdateIssueStatus(
     }
   );
 }
+
+// Whitelist API
+import type { WhitelistEmail } from "../types";
+
+export async function fetchWhitelistedEmails(): Promise<WhitelistEmail[]> {
+  const data = await api.get<{ emails: WhitelistEmail[]; total: number }>(
+    "/api/whitelist"
+  );
+  return data.emails;
+}
+
+export async function addEmailToWhitelist(
+  email: string,
+  notes?: string
+): Promise<WhitelistEmail> {
+  const data = await api.post<{ success: boolean; email: WhitelistEmail }>(
+    "/api/whitelist",
+    { email, notes }
+  );
+  return data.email;
+}
+
+export async function removeEmailFromWhitelist(emailId: number): Promise<void> {
+  await api.delete(`/api/whitelist/${emailId}`);
+}
+
+export async function checkEmailWhitelisted(email: string): Promise<boolean> {
+  const data = await api.get<{ email: string; whitelisted: boolean }>(
+    `/api/whitelist/check/${encodeURIComponent(email)}`
+  );
+  return data.whitelisted;
+}

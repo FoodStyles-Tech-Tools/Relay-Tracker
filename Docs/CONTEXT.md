@@ -79,3 +79,195 @@ To minimize credit burn and prevent the "Builder" from unnecessary exploration:
 ---
 
 **Mission:** Analyze my request, think deeply about edge cases, and generate the `spec.md` while optimizing for architectural efficiency and credit preservation.
+
+---
+
+# Vercel Deployment Guide (Lessons Learned)
+
+This section documents critical deployment issues encountered and their solutions when deploying this monorepo (React frontend + Python Flask backend) to Vercel.
+
+## Project Structure for Vercel
+
+```
+relay-tracker/
+├── frontend/          # React + Vite frontend
+│   ├── src/
+│   └── package.json
+├── backend/
+│   └── api/           # Python Flask backend (Vercel serverless)
+│       ├── index.py   # Entry point
+│       ├── requirements.txt  # MUST be here, not in backend/
+│       ├── routes/
+│       ├── services/
+│       └── utils/
+└── vercel.json
+```
+
+## Critical Issues & Solutions
+
+### 1. Python Dependencies Not Found
+
+**Error:** `ModuleNotFoundError: No module named 'flask'`
+
+**Cause:** Vercel's `@vercel/python` builder looks for `requirements.txt` in the **same directory** as the Python entry point, not in a parent directory.
+
+**Solution:** Place `requirements.txt` inside `backend/api/` (same directory as `index.py`), not in `backend/`.
+
+```bash
+# Wrong location
+backend/requirements.txt
+
+# Correct location
+backend/api/requirements.txt
+```
+
+### 2. Python Absolute Imports Fail
+
+**Error:** `ModuleNotFoundError: No module named 'api'`
+
+**Cause:** Vercel's Python runtime doesn't support absolute imports like `from api.utils.auth import ...`. The module path structure differs from local development.
+
+**Solution:** Convert ALL absolute imports to relative imports throughout the backend:
+
+```python
+# WRONG - Absolute imports (fail on Vercel)
+from api.utils.auth import require_auth
+from api.services.jira_service import create_jira_issue
+
+# CORRECT - Relative imports (work on Vercel)
+from .utils.auth import require_auth           # Same package
+from ..services.jira_service import create_jira_issue  # Parent package
+```
+
+**Files typically needing changes:**
+- `backend/api/index.py` - Use `from .routes.auth import auth_bp`
+- `backend/api/routes/*.py` - Use `from ..utils.auth import ...`
+- `backend/api/services/*.py` - Use `from ..utils.database import ...`
+- `backend/api/utils/*.py` - Use `from .database import ...`
+
+### 3. Frontend API URL Issues
+
+**Error:** Production build tries to connect to `localhost:5001`
+
+**Cause:** Vite environment variables baked into the bundle at build time with localhost fallback.
+
+**Solution:** Use empty string fallback for same-origin requests:
+
+```typescript
+// WRONG - Defaults to localhost in production
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+
+// CORRECT - Empty string means same-origin
+const API_URL = import.meta.env.VITE_API_URL ?? "";
+```
+
+**Important:** Do NOT set `VITE_API_URL` in Vercel environment variables. Leave it undefined so the frontend uses same-origin requests.
+
+### 4. Invalid URL Construction
+
+**Error:** `Failed to construct 'URL': Invalid URL`
+
+**Cause:** `new URL("")` fails when the base URL is an empty string.
+
+**Solution:** Use `window.location.origin` as fallback in URL construction:
+
+```typescript
+private buildUrl(endpoint: string, params?: Record<string, string>): string {
+  // Handle empty baseUrl (same-origin) by using window.location.origin
+  const base = this.baseUrl || window.location.origin;
+  const url = new URL(`${base}${endpoint}`);
+  // ... rest of implementation
+}
+```
+
+### 5. CORS Configuration
+
+**Error:** CORS errors when frontend calls backend API
+
+**Solution:** Add your Vercel deployment URLs to the allowed origins in `backend/api/index.py`:
+
+```python
+def get_origins():
+    frontend_url = os.getenv("FRONTEND_URL")
+    origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://relay-tracker.vercel.app",      # Production URL
+        "https://relay-five-coral.vercel.app",   # Preview/branch URL
+    ]
+    if frontend_url and frontend_url not in origins:
+        origins.append(frontend_url)
+    return origins
+```
+
+### 6. Vercel Build Cache Issues
+
+**Problem:** Old code still being served after pushing fixes.
+
+**Solution:** When redeploying, click on the three-dot menu next to the deployment and select "Redeploy". In the dialog, **check** the "Clear Build Cache" option to force a fresh build.
+
+### 7. Environment Variables Best Practices
+
+**Vercel Environment Variables to set:**
+- `TURSO_DATABASE_URL` - Your Turso/libsql database URL
+- `TURSO_AUTH_TOKEN` - Database auth token
+- `GOOGLE_CLIENT_ID` - For OAuth
+- `GOOGLE_CLIENT_SECRET` - For OAuth
+- `JWT_SECRET_KEY` - For session management
+- `JIRA_*` variables - If using Jira integration
+
+**Do NOT set:**
+- `VITE_API_URL` - Leave undefined for same-origin
+- `VITE_DEV_BYPASS_AUTH` - Development only, never in production
+- `FRONTEND_URL` with localhost values
+
+### 8. Database Schema Migrations
+
+**Issue:** `no such column: column_name` errors after deployment
+
+**Possible causes:**
+1. Database URL mismatch between local and Vercel
+2. Migration not run on production database
+
+**Solution:**
+1. Verify `TURSO_DATABASE_URL` in Vercel matches your production database
+2. Run migrations directly on the production database using DBeaver or Turso CLI
+3. Force redeploy after confirming schema is correct
+
+## vercel.json Configuration
+
+```json
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "backend/api/index.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "backend/api/index.py" },
+    { "src": "/(.*)", "dest": "frontend/$1" }
+  ]
+}
+```
+
+## Pre-Deployment Checklist
+
+Before deploying to Vercel:
+
+- [ ] `requirements.txt` is in `backend/api/` directory
+- [ ] All Python imports are relative (no `from api.` imports)
+- [ ] Frontend uses `import.meta.env.VITE_API_URL ?? ""` (not `||`)
+- [ ] `buildUrl()` handles empty baseUrl with `window.location.origin`
+- [ ] Vercel production URL added to CORS origins
+- [ ] No `VITE_*` dev-only variables in Vercel environment
+- [ ] Database schema matches what the code expects
+- [ ] `vercel.json` routes are correctly configured

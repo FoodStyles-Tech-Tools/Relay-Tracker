@@ -33,6 +33,18 @@ Relay is a modern bug and task tracking web application that integrates with Jir
 ### Hosting
 - Vercel (frontend + backend serverless)
 
+## Access Control
+
+Relay uses an **email whitelist** for private access control. Only whitelisted emails can sign in with Google OAuth. This ensures only authorized team members can access the application.
+
+### User Roles
+
+| Role      | Permissions                                                    |
+| --------- | -------------------------------------------------------------- |
+| **User**  | Create tickets, view all tickets, edit/cancel own tickets only |
+| **SQA**   | All User permissions + edit any ticket + bulk operations       |
+| **Admin** | All SQA permissions + delete tickets + manage users/roles + manage whitelist |
+
 ## Project Structure
 
 ```
@@ -44,6 +56,7 @@ relay-tracker/
 │   │   ├── hooks/           # Custom React hooks
 │   │   ├── lib/             # Utilities and API client
 │   │   ├── types/           # TypeScript types
+│   │   ├── context/         # React context providers
 │   │   ├── App.tsx          # Main app component
 │   │   └── main.tsx         # Entry point
 │   ├── public/              # Static assets
@@ -53,9 +66,12 @@ relay-tracker/
 │   │   ├── routes/          # API route handlers
 │   │   ├── services/        # Business logic services
 │   │   ├── utils/           # Utility functions
-│   │   ├── models/          # Data models
+│   │   ├── models/          # Database schema
+│   │   ├── requirements.txt # Python dependencies (MUST be here for Vercel)
 │   │   └── index.py         # Flask app entry point
-│   └── requirements.txt
+│   ├── requirements.txt     # Root requirements (for local dev)
+│   └── migrate_whitelist.py # Whitelist migration script
+├── docs/                    # Documentation
 ├── vercel.json              # Vercel deployment config
 └── README.md
 ```
@@ -67,6 +83,7 @@ relay-tracker/
 - Node.js 20.x or higher
 - Python 3.9 or higher
 - npm or yarn
+- Turso CLI (for database)
 
 ### Frontend Setup
 
@@ -80,18 +97,13 @@ relay-tracker/
    npm install
    ```
 
-3. Create `.env` file from example:
-   ```bash
-   cp .env.example .env
-   ```
-
-4. Update the `.env` file with your configuration:
-   ```
+3. Create `.env` file:
+   ```env
    VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
    VITE_API_URL=http://localhost:5001
    ```
 
-5. Start the development server:
+4. Start the development server:
    ```bash
    npm run dev
    ```
@@ -116,12 +128,12 @@ relay-tracker/
    pip install -r requirements.txt
    ```
 
-4. Create `.env` file from example:
-   ```bash
-   cp .env.example .env
-   ```
+4. Create `.env` file with your configuration (see Environment Variables section)
 
-5. Update the `.env` file with your configuration (see Environment Variables section)
+5. Run database migrations:
+   ```bash
+   python migrate_whitelist.py
+   ```
 
 6. Start the development server:
    ```bash
@@ -140,23 +152,41 @@ relay-tracker/
 | `TURSO_AUTH_TOKEN` | Turso authentication token |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `JWT_SECRET_KEY` | Secret key for JWT signing |
+| `JWT_SECRET_KEY` | Secret key for JWT token signing |
 | `JIRA_URL` | Your Jira Cloud URL (e.g., https://yourcompany.atlassian.net) |
 | `JIRA_EMAIL` | Email associated with Jira API token |
 | `JIRA_API_TOKEN` | Jira API token |
 | `JIRA_PROJECT_KEY` | Jira project key |
-| `SENDGRID_API_KEY` | SendGrid API key for emails |
-| `DISCORD_WEBHOOK_BUGS` | Discord webhook URL for bugs channel |
-| `DISCORD_WEBHOOK_TASKS` | Discord webhook URL for tasks channel |
-| `DISCORD_WEBHOOK_STORIES` | Discord webhook URL for stories channel |
-| `FRONTEND_URL` | Frontend URL for CORS |
+| `SENDGRID_API_KEY` | SendGrid API key for emails (optional) |
+| `DISCORD_WEBHOOK_BUGS` | Discord webhook URL for bugs channel (optional) |
+| `DISCORD_WEBHOOK_TASKS` | Discord webhook URL for tasks channel (optional) |
+| `DISCORD_WEBHOOK_STORIES` | Discord webhook URL for stories channel (optional) |
+| `FRONTEND_URL` | Frontend URL for CORS (optional) |
 
 ### Frontend (.env)
 
 | Variable | Description |
 |----------|-------------|
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `VITE_API_URL` | Backend API URL (leave empty for production) |
+| `VITE_API_URL` | Backend API URL (leave empty for production same-origin) |
+
+## First-Time Setup
+
+**IMPORTANT:** Before anyone can sign in, you must add the first admin email to the whitelist.
+
+### Using Turso CLI:
+
+```bash
+turso db shell your-database-name
+```
+
+In Turso shell:
+```sql
+INSERT INTO allowed_emails (email, notes)
+VALUES ('your-email@example.com', 'First admin user');
+```
+
+The first user to sign in will automatically become admin. After that, use the **Admin > Email Whitelist** page to add more users.
 
 ## Deployment
 
@@ -166,11 +196,21 @@ relay-tracker/
 
 2. Import the project in Vercel
 
-3. Configure environment variables in the Vercel dashboard
+3. Configure environment variables in the Vercel dashboard:
+   - **DO NOT** set `VITE_API_URL` (leave empty for same-origin requests)
+   - **DO NOT** set `VITE_DEV_BYPASS_AUTH` in production
 
 4. Deploy!
 
 The application will be available at `https://relay-tracker.vercel.app` (or your custom domain)
+
+### Important Deployment Notes
+
+See [docs/CONTEXT.md](docs/CONTEXT.md) for detailed deployment troubleshooting, including:
+- Python relative imports for Vercel
+- Requirements.txt location
+- CORS configuration
+- Build cache issues
 
 ## API Endpoints
 
@@ -179,17 +219,31 @@ The application will be available at `https://relay-tracker.vercel.app` (or your
 | `/api/health` | GET | Health check |
 | `/api/auth/verify` | POST | Verify Google token |
 | `/api/auth/me` | GET | Get current user |
+| `/api/auth/users` | GET | List all users (admin) |
 | `/api/issues` | GET | List issues |
 | `/api/issues` | POST | Create issue |
-| `/api/issues/{key}` | GET/PUT/DELETE | Issue operations |
-| `/api/whitelist` | GET/POST | Whitelist management (admin) |
-| `/api/whitelist/{id}` | DELETE | Remove from whitelist (admin) |
+| `/api/issues/{key}` | GET | Get issue details |
+| `/api/issues/{key}` | PUT | Update issue |
+| `/api/whitelist` | GET | List whitelisted emails (admin) |
+| `/api/whitelist` | POST | Add email to whitelist (admin) |
+| `/api/whitelist/{id}` | DELETE | Remove email from whitelist (admin) |
 
 ## Branding
 
+- **Name**: Relay
+- **Tagline**: "Fast track from report to resolution"
 - **Colors**: Orange/Red gradient (#FF6B35 → #F7931E)
 - **Style**: Modern, glassmorphism, clean
 - **Logo**: Signal waves icon
+
+## Security
+
+- All authentication via Google OAuth 2.0
+- JWT tokens for session management
+- Email whitelist for access control
+- Role-based permissions
+- CORS protection
+- No sensitive data stored in frontend
 
 ## License
 
